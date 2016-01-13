@@ -1,5 +1,5 @@
 /**
- * CanvasSlot
+ * CanvasSlot TODO
  */
 (function(superClass) {
     var TextureAtlas = dragonBones.TextureAtlas;
