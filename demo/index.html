@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>dragonbones demo</title>
+    <style>
+        body,ul,li{
+            margin: 0;
+            padding: 0;
+        }
+
+        h1{
+            width: 100%;
+            text-align: center;
+        }
+
+        #navContainer{
+            position: absolute;
+            left: 5px;
+            top: 5px;
+            list-style: none;
+            width:150px;
+        }
+
+        #navContainer li{
+            font-size: 20px;
+            line-height: 40px;
+            height: 40px;
+            margin: 1px 1px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        #navContainer li a{
+            color:#000;
+            text-decoration: none;
+        }
+
+        #navContainer li.active{
+            background: #ddd;
+        }
+
+        #navContainer li:hover{
+            background: #ccc;
+        }
+
+        #animContainer{
+            position: absolute;
+            left: 50%;
+            top:400px;
+            transform:scale(0.7, 0.7);
+        }
+
+    </style>
+</head>
+<body>
+    <h1>click to change animation</h1>
+    <div id='animContainer'></div>
+    <ul id='navContainer'></ul>
+    <script src='../build/dragonbones.js'></script>
+    <script src='../src/factory/domFactory.js'></script>
+    <script src='./demo.js'></script>
+    <script>
+        var list = ['dragon', 'anim', 'spine', 'cocos'];
+        var animName = location.search.slice(1);
+        if(list.indexOf(animName) === -1){
+            animName = list[0];
+        }
+        demo.load(animName);
+
+        (function initNav(){
+            var navElem = document.getElementById('navContainer')
+            list.forEach(function(name){
+                var elem = document.createElement('li');
+                elem.innerHTML = '<li><a href="javascript:void(0)">' + name + '</a></li>';
+                navElem.appendChild(elem);
+                elem.onclick = function(){
+                    location.search = name;
+                };
+                if(name === animName){
+                    elem.className = 'active';
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
