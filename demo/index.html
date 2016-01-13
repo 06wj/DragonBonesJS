@@ -51,13 +51,18 @@
             transform:scale(0.7, 0.7);
         }
 
+        #githubLink{
+            position: absolute;
+            top:0px;
+            right: 0px;
+        }
     </style>
 </head>
 <body>
     <h1>click to change animation</h1>
     <div id='animContainer'></div>
     <ul id='navContainer'></ul>
-    <script src='../build/dragonbones.js'></script>
+    <script src='../build/dragonbones.min.js'></script>
     <script src='../src/factory/domFactory.js'></script>
     <script src='./demo.js'></script>
     <script>
@@ -83,5 +88,8 @@
             });
         })();
     </script>
+    <a href="https://github.com/06wj/DragonBonesJS" id='githubLink'>
+      <img style="position: absolute; top: 0; right: 0; border: 0;" src="http://06wj.github.io/FL/example/link.png" alt="Fork me on GitHub">
+    </a>
 </body>
 </html>
