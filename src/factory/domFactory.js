@@ -46,7 +46,7 @@
         _updateTransform: function() {
             if (this._display) {
                 var m = this._globalTransformMatrix;
-                this._display.style.webkitTransform = 'matrix3d(' + m.a + ',' + m.b + ',0,0,' + m.c + ',' + m.d + ',0,0,0,0,1,0,' +(m.tx-this._display.pivotX) + ',' + (m.ty-this._display.pivotY) + ',0,1)';
+                this._display.style.webkitTransform = 'matrix3d(' + m.a.toFixed(4) + ',' + m.b.toFixed(4) + ',0,0,' + m.c.toFixed(4) + ',' + m.d.toFixed(4) + ',0,0,0,0,1,0,' +(m.tx-this._display.pivotX).toFixed(4) + ',' + (m.ty-this._display.pivotY).toFixed(4) + ',0,1)';
             }
         },
         _updateDisplayVisible: function(value) {
