@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <title>dragonbones demo</title>
     <style>
-        body,ul,li{
+        body,ul,li, h1{
             margin: 0;
             padding: 0;
         }
 
         h1{
             width: 100%;
+            margin-top:5px;
             text-align: center;
         }
 
@@ -46,9 +47,12 @@
 
         #animContainer{
             position: absolute;
-            left: 50%;
-            top:400px;
-            transform:scale(0.7, 0.7);
+            left:200px;
+            top:40px;
+        }
+
+        canvas{
+            border: 1px solid #000;
         }
 
         #githubLink{
@@ -62,25 +66,39 @@
     <h1>click to change animation</h1>
     <div id='animContainer'></div>
     <ul id='navContainer'></ul>
-    <script src='../build/dragonbones.min.js'></script>
-    <script src='../src/factory/domFactory.js'></script>
+    <script src='../build/dragonbones-dom.min.js'></script>
+    <script src='../build/dragonbones-pixi.min.js'></script>
+    <script src='./lib/pixi.min.js'></script>
     <script src='./demo.js'></script>
     <script>
-        var list = ['dragon', 'anim', 'spine', 'cocos'];
-        var animName = location.search.slice(1);
-        if(list.indexOf(animName) === -1){
-            animName = list[0];
+        var animDict = {
+            dragon:[550, 550],
+            cocos:[500, 800],
+            anim:[600, 500],
+            spine:[600, 630]
         }
-        demo.load(animName);
+        var animList = [];
+        for(var animName in animDict){
+            animList.push(animName);
+        }
 
+        var factorys = ['dom', 'pixi'];
+
+        var keys = demo.getUrlKey();
+        var animName = keys.anim;
+        var factoryType = keys.type;
+
+        demo.pos = animDict[animName];
+        demo.load(animName);
         (function initNav(){
             var navElem = document.getElementById('navContainer')
-            list.forEach(function(name){
+            animList.forEach(function(name){
                 var elem = document.createElement('li');
                 elem.innerHTML = '<li><a href="javascript:void(0)">' + name + '</a></li>';
                 navElem.appendChild(elem);
                 elem.onclick = function(){
-                    location.search = name;
+                    keys.anim = name;
+                    demo.setUrlKey(keys);
                 };
                 if(name === animName){
                     elem.className = 'active';
@@ -88,8 +106,5 @@
             });
         })();
     </script>
-    <a href="https://github.com/06wj/DragonBonesJS" id='githubLink'>
-      <img style="position: absolute; top: 0; right: 0; border: 0;" src="http://06wj.github.io/FL/example/link.png" alt="Fork me on GitHub">
-    </a>
 </body>
 </html>

@@ -3703,7 +3703,6 @@ var dragonBones;
             var textureAtlasArr;
             var i;
             var len;
-
             if (textureAtlasName) {
                 textureAtlasArr = this.textureAtlasDic[textureAtlasName];
                 if (textureAtlasArr) {
@@ -3733,7 +3732,6 @@ var dragonBones;
                     }
                 }
             }
-
             if (!targetTextureAtlas) {
                 return null;
             }

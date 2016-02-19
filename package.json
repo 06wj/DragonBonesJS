@@ -9,13 +9,13 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "gulp": "~3.9.1",
     "del": "^1.2.0",
-    "glob": "^6.0.4",
-    "gulp": "^3.9.0",
     "gulp-concat": "^2.6.0",
+    "gulp-if": "~2.0.0",
     "gulp-rename": "~1.2.2",
-    "gulp-sequence": "~0.4.3",
     "gulp-uglify": "~1.5.1",
+    "run-sequence": "^1.1.5",
     "uglify": "~0.1.5",
     "vinyl-paths": "~2.1.0"
   }

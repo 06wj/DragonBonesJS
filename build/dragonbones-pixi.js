@@ -1,3 +1,133 @@
+if (!window.egret) {
+    var egret_strings = {
+        4001: "Abstract class can not be instantiated!",
+        4002: "Unnamed data!",
+        4003: "Nonsupport version!"
+    };
+
+    var Event = function(type, bubbles, cancelable, data) {
+        this.type = type;
+        this.bubbles = bubbles || false;
+        this.cancelable = cancelable || false;
+        this.data = data;
+    };
+
+    var EventDispatcher = function(target) {
+        this._listenerDict = {};
+    };
+
+    EventDispatcher.prototype = {
+        constructor: EventDispatcher,
+        addEventListener: function(type, listener, thisObject, useCapture, priority, dispatchOnce) {
+            if (!this._listenerDict[type]) {
+                this._listenerDict[type] = [];
+            }
+            this._listenerDict[type].push({
+                listener: listener,
+                thisObject: thisObject,
+                useCapture: useCapture,
+                priority: priority,
+                once: dispatchOnce
+            });
+        },
+        once: function(type, listener, thisObject, useCapture, priority) {
+            this.addEventListener(type, listener, thisObject, useCapture, priority, true);
+        },
+        removeEventListener: function(type, listener, thisObject, useCapture) {
+            if (!type) {
+                this._listenerDict = {};
+            } else if (!listener) {
+                if (this._listenerDict[type]) {
+                    this._listenerDict[type].length = 0;
+                }
+            } else {
+                var listeners = this._listenerDict[type];
+                var index = listeners.indexOf(listener);
+                if (index > -1) {
+                    listeners.splice(index, 1);
+                }
+            }
+        },
+        hasEventListener: function(type) {
+            return this._listenerDict[type];
+        },
+        dispatchEvent: function(event) {
+            if (event && event.type && this._listenerDict[event.type]) {
+                var listeners = this._listenerDict[event.type];
+                var copyListeners = listeners.slice();
+                for (var i = 0; i < copyListeners.length; i++) {
+                    var listenerObj = copyListeners[i];
+                    if (listenerObj.dispatchOnce) {
+                        var index = listeners.indexOf(listenerObj);
+                        if (index > -1) {
+                            listeners.splice(index, 1);
+                        }
+                        if (listenerObj.listener) {
+                            listenerObj.listener.call(listenerObj.thisObject || this, event);
+                        }
+                    }
+                }
+            }
+        },
+        willTrigger: function(type) {
+            return this.hasEventListener(type);
+        }
+    };
+
+    window.egret = {
+        getString: function(code) {
+            return egret_strings[code] || 'no string code';
+        },
+        Event: Event,
+        EventDispatcher: EventDispatcher,
+        registerClass: function(classDefinition, className, interfaceNames) {
+            var prototype = classDefinition.prototype;
+            prototype.__class__ = className;
+            var types = [className];
+            if (interfaceNames) {
+                types = types.concat(interfaceNames);
+            }
+            var superTypes = prototype.__types__;
+            if (prototype.__types__) {
+                var length = superTypes.length;
+                for (var i = 0; i < length; i++) {
+                    var name = superTypes[i];
+                    if (types.indexOf(name) == -1) {
+                        types.push(name);
+                    }
+                }
+            }
+            prototype.__types__ = types;
+        }
+    };
+}
+
+window.__extends = window.__extends || function __extends(d, b, mixin) {
+    for (var p in b)
+        if (b.hasOwnProperty(p))
+            d[p] = b[p];
+
+    function __() {
+        this.constructor = d;
+    }
+    __.prototype = b.prototype;
+    d.prototype = new __();
+
+    if(mixin){
+        for(var key in mixin){
+            d.prototype[key] = mixin[key];
+        }
+    }
+};
+
+window.__define = window.__define || function(o, p, g, s) {
+    Object.defineProperty(o, p, {
+        configurable: true,
+        enumerable: true,
+        get: g,
+        set: s
+    });
+};
 var dragonBones;
 (function (dragonBones) {
     var DragonBones = (function () {
@@ -7914,3 +8044,208 @@ var dragonBones;
     dragonBones.FastSlotTimelineState = FastSlotTimelineState;
     egret.registerClass(FastSlotTimelineState,'dragonBones.FastSlotTimelineState');
 })(dragonBones || (dragonBones = {}));
+
+(function(){
+    var DataParser = dragonBones.DataParser;
+    var TextureData = dragonBones.TextureData;
+
+    var TextureAtlas = function(texture, textureAtlasRawData, scale){
+        this._textureDatas = {};
+        this.scale = scale||1;
+        this.texture = texture;
+        this.name = textureAtlasRawData.name;
+
+        this.parseData(textureAtlasRawData);
+    };
+
+    TextureAtlas.rotatedDic = {};
+
+    TextureAtlas.prototype = {
+        constructor:TextureAtlas,
+        getTexture:function(fullName){
+            var data = this._textureDatas[fullName];
+            if(data){
+                data.texture = this.texture;
+                if(data.rotated)
+                {
+                    TextureAtlas.rotatedDic[fullName] = 1;
+                }
+            }
+            return data;
+        },
+        dispose:function(){
+            this.texture = null;
+            this._textureDatas = {};
+        },
+        getRegion:function(subTextureName){
+            var textureData = this._textureDatas[subTextureName];
+            if(textureData && textureData instanceof TextureData){
+                return textureData.region;
+            }
+            return null;
+        },
+        getFrame:function(subTextureName){
+            var textureData = this._textureDatas[subTextureName];
+            if(textureData && textureData instanceof TextureData)
+            {
+                return textureData.frame;
+            }
+            return null;
+        },
+        parseData:function(textureAtlasRawData){
+            this._textureDatas = DataParser.parseTextureAtlasData(textureAtlasRawData, this.scale);
+        }
+    };
+    dragonBones.TextureAtlas = TextureAtlas;
+})();
+/**
+ * PixiSlot
+ */
+(function(superClass) {
+    var RAD2DEG = 180/Math.PI;
+    var TextureAtlas = dragonBones.TextureAtlas;
+    var PixiSlot = function() {
+        superClass.call(this, this);
+        this._display = null;
+    };
+
+    __extends(PixiSlot, superClass, {
+        dispose: function() {
+            if (this._displayList) {
+                var length = this._displayList.length;
+                for (var i = 0; i < length; i++) {
+                    var content = this._displayList[i];
+                    if (content instanceof Armature) {
+                        content.dispose();
+                    }
+                }
+            }
+
+            superClass.prototype.dispose();
+            this._display = null;
+        },
+        _updateDisplay: function(value) {
+            this._display = value;
+        },
+        _getDisplayIndex: function() {
+            if (this._display && this._display.parent) {
+                return this._display.parent.getChildIndex(this._display);
+            }
+            return -1;
+        },
+        _addDisplayToContainer: function(container, index) {
+            if (this._display && container) {
+                if(index){
+                    container.addChildAt(this._display, index);
+                }
+                else{
+                    container.addChild(this._display);
+                }
+            }
+        },
+        _removeDisplayFromContainer: function() {
+            if (this._display && this._display.parent) {
+                this._display.parent.removeChild(this._display);
+            }
+        },
+        _updateTransform: function() {
+            if (this._display) {
+                this._display.position.x = this._global.x;
+                this._display.position.y = this._global.y;
+                this._display.scale.x = this._global.scaleX;
+                this._display.scale.y = this._global.scaleY;
+                this._display.rotation = this._global.skewX;
+            }
+        },
+        _updateDisplayVisible: function(value) {
+            if (this._display && this._parent) {
+                this._display.visible = this._parent._visible && this._visible && value;
+            }
+        },
+        _updateDisplayColor: function(aOffset, rOffset, gOffset, bOffset, aMultiplier, rMultiplier, gMultiplier, bMultiplier, colorChange) {
+            superClass.prototype._updateDisplayColor.call(this, aOffset, rOffset, gOffset, bOffset, aMultiplier, rMultiplier, gMultiplier, bMultiplier, colorChange);
+            if (this._display) {
+                this._display.alpha = aMultiplier;
+            }
+        },
+        _updateDisplayBlendMode: function(value) {
+            // if (this._display && value) {
+            //     this._display.blendMode = value;
+            // }
+        },
+        _calculateRelativeParentTransform: function() {
+            this._global.scaleX = this._origin.scaleX * this._offset.scaleX;
+            this._global.scaleY = this._origin.scaleY * this._offset.scaleY;
+            this._global.skewX = this._origin.skewX + this._offset.skewX;
+            this._global.skewY = this._origin.skewY + this._offset.skewY;
+            this._global.x = this._origin.x + this._offset.x + this._parent._tweenPivot.x;
+            this._global.y = this._origin.y + this._offset.y + this._parent._tweenPivot.y;
+
+            if (this._displayDataList &&
+                this._currentDisplayIndex >= 0 &&
+                this._displayDataList[this._currentDisplayIndex] &&
+                TextureAtlas.rotatedDic[this._displayDataList[this._currentDisplayIndex].name] == 1) {
+                this._global.skewX -= 1.57;
+                this._global.skewY -= 1.57;
+            }
+        }
+    });
+
+    dragonBones.PixiSlot = PixiSlot;
+})(dragonBones.Slot);
+
+/**
+ * PixiFactory
+ */
+(function(superClass){
+    var Armature = dragonBones.Armature;
+    var PixiSlot = dragonBones.PixiSlot;
+
+    var PixiFactory = function(){
+        superClass.call(this, this);
+    };
+    __extends(PixiFactory, superClass, {
+        _generateArmature:function(){
+            var armature = new Armature(new PIXI.Container);
+            return armature;
+        },
+        _generateSlot:function(){
+            var slot = new PixiSlot();
+            return slot;
+        },
+        _generateDisplay:function(textureAtlas, fullName, pivotX, pivotY){
+            var texture = textureAtlas.getTexture(fullName);
+            var region = texture.region;
+
+            this._textureCache = this._textureCache || {};
+            if(!this._textureCache[textureAtlas.texture.src]){
+                this._textureCache[textureAtlas.texture.src] = new PIXI.BaseTexture(textureAtlas.texture);
+            }
+            var pixiTexture = new PIXI.Texture(
+                this._textureCache[textureAtlas.texture.src],
+                new PIXI.Rectangle(region.x, region.y, region.width, region.height)
+            );
+            var bitmap = new PIXI.Sprite(pixiTexture);
+
+            if(isNaN(pivotX)||isNaN(pivotY))
+            {
+                var subTextureFrame = textureAtlas.getFrame(fullName);
+                if(subTextureFrame != null)
+                {
+                    pivotX = subTextureFrame.width/2;
+                    pivotY = subTextureFrame.height/2;
+                }
+                else
+                {
+                    pivotX = texture.region.width/2;
+                    pivotY = texture.region.height/2;
+                }
+            }
+            bitmap.pivot.x = pivotX;
+            bitmap.pivot.y = pivotY;
+            return bitmap;
+        }
+    });
+
+    dragonBones.PixiFactory = PixiFactory;
+}(dragonBones.BaseFactory));

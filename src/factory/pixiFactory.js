@@ -1,14 +1,15 @@
 /**
- * CanvasSlot TODO
+ * PixiSlot
  */
 (function(superClass) {
+    var RAD2DEG = 180/Math.PI;
     var TextureAtlas = dragonBones.TextureAtlas;
-    var CanvasSlot = function() {
+    var PixiSlot = function() {
         superClass.call(this, this);
         this._display = null;
     };
 
-    __extends(CanvasSlot, superClass, {
+    __extends(PixiSlot, superClass, {
         dispose: function() {
             if (this._displayList) {
                 var length = this._displayList.length;
@@ -34,37 +35,43 @@
         },
         _addDisplayToContainer: function(container, index) {
             if (this._display && container) {
-                container.appendChild(this._display);
-                this._display.style.zIndex = container.childNodes.length;
+                if(index){
+                    container.addChildAt(this._display, index);
+                }
+                else{
+                    container.addChild(this._display);
+                }
             }
         },
         _removeDisplayFromContainer: function() {
-            if (this._display && this._display.parentNode) {
-                this._display.parentNode.removeChild(this._display);
+            if (this._display && this._display.parent) {
+                this._display.parent.removeChild(this._display);
             }
         },
         _updateTransform: function() {
             if (this._display) {
-                var m = this._globalTransformMatrix;
-                this._display.style.transform = 'matrix3d(' + m.a + ',' + m.b + ',0,0,' + m.c + ',' + m.d + ',0,0,0,0,1,0,' +(m.tx-this._display.pivotX) + ',' + (m.ty-this._display.pivotY) + ',0,1)';
+                this._display.position.x = this._global.x;
+                this._display.position.y = this._global.y;
+                this._display.scale.x = this._global.scaleX;
+                this._display.scale.y = this._global.scaleY;
+                this._display.rotation = this._global.skewX;
             }
         },
         _updateDisplayVisible: function(value) {
             if (this._display && this._parent) {
-                var visible = this._parent._visible && this._visible && value;
-                this._display.style.display = visible?'block':'none';
+                this._display.visible = this._parent._visible && this._visible && value;
             }
         },
         _updateDisplayColor: function(aOffset, rOffset, gOffset, bOffset, aMultiplier, rMultiplier, gMultiplier, bMultiplier, colorChange) {
             superClass.prototype._updateDisplayColor.call(this, aOffset, rOffset, gOffset, bOffset, aMultiplier, rMultiplier, gMultiplier, bMultiplier, colorChange);
             if (this._display) {
-                this._display.style.opacity = aMultiplier;
+                this._display.alpha = aMultiplier;
             }
         },
         _updateDisplayBlendMode: function(value) {
-            if (this._display && value) {
-                this._display.blendMode = value;
-            }
+            // if (this._display && value) {
+            //     this._display.blendMode = value;
+            // }
         },
         _calculateRelativeParentTransform: function() {
             this._global.scaleX = this._origin.scaleX * this._offset.scaleX;
@@ -84,38 +91,42 @@
         }
     });
 
-    dragonBones.CanvasSlot = CanvasSlot;
+    dragonBones.PixiSlot = PixiSlot;
 })(dragonBones.Slot);
 
 /**
- * CanvasFactory
+ * PixiFactory
  */
 (function(superClass){
     var Armature = dragonBones.Armature;
-    var CanvasSlot = dragonBones.CanvasSlot;
+    var PixiSlot = dragonBones.PixiSlot;
 
-    var CanvasFactory = function(){
+    var PixiFactory = function(){
         superClass.call(this, this);
     };
-    __extends(CanvasFactory, superClass, {
+    __extends(PixiFactory, superClass, {
         _generateArmature:function(){
-            var container = document.createElement('div');
-            container.style.position = 'relative';
-            var armature = new Armature(container);
+            var armature = new Armature(new PIXI.Container);
             return armature;
         },
         _generateSlot:function(){
-            var slot = new CanvasSlot();
+            var slot = new PixiSlot();
             return slot;
         },
         _generateDisplay:function(textureAtlas, fullName, pivotX, pivotY){
-            var bitmap = document.createElement('div');
             var texture = textureAtlas.getTexture(fullName);
-            bitmap.style.background = 'url(' + textureAtlas.texture.src + ')';
-            bitmap.style.width = texture.region.width + 'px';
-            bitmap.style.height = texture.region.height + 'px';
-            bitmap.style.backgroundPosition = -texture.region.x + 'px -' + texture.region.y + 'px';
-            bitmap.style.position = 'absolute';
+            var region = texture.region;
+
+            this._textureCache = this._textureCache || {};
+            if(!this._textureCache[textureAtlas.texture.src]){
+                this._textureCache[textureAtlas.texture.src] = new PIXI.BaseTexture(textureAtlas.texture);
+            }
+            var pixiTexture = new PIXI.Texture(
+                this._textureCache[textureAtlas.texture.src],
+                new PIXI.Rectangle(region.x, region.y, region.width, region.height)
+            );
+            var bitmap = new PIXI.Sprite(pixiTexture);
+
             if(isNaN(pivotX)||isNaN(pivotY))
             {
                 var subTextureFrame = textureAtlas.getFrame(fullName);
@@ -130,12 +141,11 @@
                     pivotY = texture.region.height/2;
                 }
             }
-            bitmap.style.transformOrigin = pivotX + 'px ' + pivotY + 'px';
-            bitmap.pivotX = pivotX;
-            bitmap.pivotY = pivotY;
+            bitmap.pivot.x = pivotX;
+            bitmap.pivot.y = pivotY;
             return bitmap;
         }
     });
 
-    dragonBones.CanvasFactory = CanvasFactory;
+    dragonBones.PixiFactory = PixiFactory;
 }(dragonBones.BaseFactory));
