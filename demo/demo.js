@@ -1,14 +1,25 @@
 var demo = {
     init:function(textureImg, textureData, skeletonData){
+        var width = 1200;
+        var height = 900;
+        var scale = 0.7;
         switch(factoryType){
             case 'pixi':
                 this.initArmature(textureImg, textureData, skeletonData, dragonBones.PixiFactory);
-                this.initForPixi(1200, 900, 0.7);
+                this.initForPixi(width, height, scale);
+                break;
+            case 'hilo':
+                this.initArmature(textureImg, textureData, skeletonData, dragonBones.HiloFactory);
+                this.initForHilo(width, height, scale);
+                break;
+            case 'createjs':
+                this.initArmature(textureImg, textureData, skeletonData, dragonBones.CreatejsFactory);
+                this.initForCreatejs(width, height, scale);
                 break;
             case 'dom':
             default:
                 this.initArmature(textureImg, textureData, skeletonData, dragonBones.DomFactory);
-                this.initForDom(1200, 900, 0.7);
+                this.initForDom(width, height, scale);
                 break;
         }
 
@@ -45,6 +56,44 @@ var demo = {
             requestAnimationFrame(tick);
         }
         tick();
+    },
+    initForHilo:function(gameWidth, gameHeight, scale){
+        var stage = this.stage = new Hilo.Stage({
+            renderType:'webgl',
+            width:gameWidth,
+            height:gameHeight,
+            scaleX:scale,
+            scaleY:scale,
+            container:'animContainer'
+        });
+
+        stage.addChild(this.armatureDisplay);
+
+        var ticker = new Hilo.Ticker(60);
+        ticker.addTick(stage);
+        ticker.addTick({
+            tick:function(dt){
+                dragonBones.WorldClock.clock.advanceTime(dt * 0.001);
+            }
+        });
+        ticker.start();
+    },
+    initForCreatejs:function(gameWidth, gameHeight, scale){
+        var canvas = document.createElement('canvas');
+        canvas.width = gameWidth * scale;
+        canvas.height = gameHeight * scale;
+        var stage = this.stage = new createjs.Stage(canvas);
+
+        stage.scaleX = scale;
+        stage.scaleY = scale;
+        stage.addChild(this.armatureDisplay);
+        document.getElementById('animContainer').appendChild(canvas);
+
+        createjs.Ticker.addEventListener("tick", function(e){
+            dragonBones.WorldClock.clock.advanceTime(e.delta * 0.001);
+            stage.update();
+        });
+
     },
     initForDom:function(gameWidth, gameHeight, scale){
         var armatureDisplay = this.armatureDisplay;
@@ -132,7 +181,7 @@ var demo = {
         var that = this;
         var factoryTypeBtn = document.createElement('div');
         document.body.appendChild(factoryTypeBtn);
-        var factoryTypes = ['dom', 'pixi'];
+        var factoryTypes = ['dom', 'pixi', 'hilo', 'createjs'];
         factoryTypes.forEach(function(type){
             var typeElem = document.createElement('div');
             typeElem.innerHTML = '<input type="radio" data-type="{type}">{type}</input>'.replace(/{type}/g, type);

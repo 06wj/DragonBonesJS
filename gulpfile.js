@@ -50,7 +50,7 @@ gulp.task('build:dragonbones', function(){
         });
 });
 
-var factoryNames = ['dom', 'pixi'];
+var factoryNames = ['dom', 'pixi', 'hilo', 'createjs'];
 factoryNames.forEach(function(factoryName){
     gulp.task('build:factory-' + factoryName, function(){
         return gulp.src(['build/dragonbones-alone.js', 'src/factory/' + factoryName + 'Factory.js'])

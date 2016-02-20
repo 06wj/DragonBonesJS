@@ -66,9 +66,13 @@
     <h1>click to change animation</h1>
     <div id='animContainer'></div>
     <ul id='navContainer'></ul>
-    <script src='../build/dragonbones-dom.min.js'></script>
     <script src='../build/dragonbones-pixi.min.js'></script>
+    <script src='../build/dragonbones-createjs.min.js'></script>
+    <script src='../build/dragonbones-hilo.min.js'></script>
+    <script src='../build/dragonbones-dom.min.js'></script>
     <script src='./lib/pixi.min.js'></script>
+    <script src='./lib/hilo.min.js'></script>
+    <script src='./lib/easeljs.min.js'></script>
     <script src='./demo.js'></script>
     <script>
         var animDict = {
@@ -81,8 +85,6 @@
         for(var animName in animDict){
             animList.push(animName);
         }
-
-        var factorys = ['dom', 'pixi'];
 
         var keys = demo.getUrlKey();
         var animName = keys.anim;

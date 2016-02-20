@@ -8099,17 +8099,17 @@ var dragonBones;
     dragonBones.TextureAtlas = TextureAtlas;
 })();
 /**
- * PixiSlot
+ * HiloSlot
  */
 (function(superClass) {
     var RAD2DEG = 180/Math.PI;
     var TextureAtlas = dragonBones.TextureAtlas;
-    var PixiSlot = function() {
+    var HiloSlot = function() {
         superClass.call(this, this);
         this._display = null;
     };
 
-    __extends(PixiSlot, superClass, {
+    __extends(HiloSlot, superClass, {
         dispose: function() {
             if (this._displayList) {
                 var length = this._displayList.length;
@@ -8150,11 +8150,11 @@ var dragonBones;
         },
         _updateTransform: function() {
             if (this._display) {
-                this._display.position.x = this._global.x;
-                this._display.position.y = this._global.y;
-                this._display.scale.x = this._global.scaleX;
-                this._display.scale.y = this._global.scaleY;
-                this._display.rotation = this._global.skewX;
+                this._display.x = this._global.x;
+                this._display.y = this._global.y;
+                this._display.scaleX = this._global.scaleX;
+                this._display.scaleY = this._global.scaleY;
+                this._display.rotation = this._global.skewX * RAD2DEG;
             }
         },
         _updateDisplayVisible: function(value) {
@@ -8191,41 +8191,35 @@ var dragonBones;
         }
     });
 
-    dragonBones.PixiSlot = PixiSlot;
+    dragonBones.HiloSlot = HiloSlot;
 })(dragonBones.Slot);
 
 /**
- * PixiFactory
+ * HiloFactory
  */
 (function(superClass){
     var Armature = dragonBones.Armature;
-    var PixiSlot = dragonBones.PixiSlot;
+    var HiloSlot = dragonBones.HiloSlot;
 
-    var PixiFactory = function(){
+    var HiloFactory = function(){
         superClass.call(this, this);
     };
-    __extends(PixiFactory, superClass, {
+    __extends(HiloFactory, superClass, {
         _generateArmature:function(){
-            var armature = new Armature(new PIXI.Container);
+            var armature = new Armature(new Hilo.Container);
             return armature;
         },
         _generateSlot:function(){
-            var slot = new PixiSlot();
+            var slot = new HiloSlot();
             return slot;
         },
         _generateDisplay:function(textureAtlas, fullName, pivotX, pivotY){
             var texture = textureAtlas.getTexture(fullName);
             var region = texture.region;
-
-            this._textureCache = this._textureCache || {};
-            if(!this._textureCache[textureAtlas.texture.src]){
-                this._textureCache[textureAtlas.texture.src] = new PIXI.BaseTexture(textureAtlas.texture);
-            }
-            var pixiTexture = new PIXI.Texture(
-                this._textureCache[textureAtlas.texture.src],
-                new PIXI.Rectangle(region.x, region.y, region.width, region.height)
-            );
-            var bitmap = new PIXI.Sprite(pixiTexture);
+            var bitmap = new Hilo.Bitmap({
+                image:textureAtlas.texture,
+                rect:[region.x, region.y, region.width, region.height]
+            });
 
             if(isNaN(pivotX)||isNaN(pivotY))
             {
@@ -8241,11 +8235,11 @@ var dragonBones;
                     pivotY = texture.region.height/2;
                 }
             }
-            bitmap.pivot.x = pivotX;
-            bitmap.pivot.y = pivotY;
+            bitmap.pivotX = pivotX;
+            bitmap.pivotY = pivotY;
             return bitmap;
         }
     });
 
-    dragonBones.PixiFactory = PixiFactory;
+    dragonBones.HiloFactory = HiloFactory;
 }(dragonBones.BaseFactory));
