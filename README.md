@@ -4,7 +4,7 @@
 ## Info
 This is DragonBones Library JavaScript Version. Update to 4.0 version.
 
-It now support [pixi.js](http://www.pixijs.com/) factory and dom factory.
+It now support [pixi.js](http://www.pixijs.com/), [hilo](https://github.com/hiloteam/hilo), [createjs](https://github.com/CreateJS/EaselJS) and dom mode.
 you can add your own render factory like this [factory](https://github.com/06wj/DragonBonesJS/tree/master/src/factory);
 
 [Official DragonBones](https://github.com/egret-labs/egret-core/tree/master/src/extension/dragonbones) use typescript and only support egret. I transform it and now can easily support multi render library.
@@ -12,23 +12,24 @@ you can add your own render factory like this [factory](https://github.com/06wj/
 ## Demo
 
 * [pixi.js Demo](http://06wj.github.io/DragonBonesJS/demo/index.html?type=pixi&anim=dragon)
+* [hilo Demo](http://06wj.github.io/DragonBonesJS/demo/index.html?type=hilo&anim=dragon)
+* [createjs Demo](http://06wj.github.io/DragonBonesJS/demo/index.html?type=createjs&anim=dragon)
 * [dom Demo](http://06wj.github.io/DragonBonesJS/demo/index.html?type=dom&anim=dragon)
 
 
 ## Usage
 
 * [dragonbones-alone.js](./build/dragonbones-alone.js) is dragonbones without factory.
-* [dragonbones-dom.js](./build/dragonbones-dom.js) is dragonbones width dom factory.
 * [dragonbones-pixi.js](./build/dragonbones-pixi.js) is dragonbones width pixi factory.
+* [dragonbones-hilo.js](./build/dragonbones-hilo.js) is dragonbones width hilo factory.
+* [dragonbones-createjs.js](./build/dragonbones-createjs.js) is dragonbones width createjs factory.
+* [dragonbones-dom.js](./build/dragonbones-dom.js) is dragonbones width dom factory.
 
 * quick start:
 
     ```javascript
-    //create DomFactory
+    //create factory, now support PixiFactory, HiloFactory, CreatejsFactory and DomFactory
     var dragonbonesFactory = new dragonBones.DomFactory();
-
-    //or create PixiFactory
-    var dragonbonesFactory = new dragonBones.PixiFactory();
 
     /**
      * add texture data and skeleton data
