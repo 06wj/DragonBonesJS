@@ -1,32 +1,39 @@
 var demo = {
-    init:function(textureImg, textureData, skeletonData){
-        var width = 1200;
-        var height = 900;
-        var scale = 0.7;
-        switch(factoryType){
-            case 'pixi':
-                this.initArmature(textureImg, textureData, skeletonData, dragonBones.PixiFactory);
-                this.initForPixi(width, height, scale);
-                break;
-            case 'hilo':
-                this.initArmature(textureImg, textureData, skeletonData, dragonBones.HiloFactory);
-                this.initForHilo(width, height, scale);
-                break;
-            case 'createjs':
-                this.initArmature(textureImg, textureData, skeletonData, dragonBones.CreatejsFactory);
-                this.initForCreatejs(width, height, scale);
-                break;
-            case 'dom':
-            default:
-                this.initArmature(textureImg, textureData, skeletonData, dragonBones.DomFactory);
-                this.initForDom(width, height, scale);
-                break;
-        }
-
+    init:function(animName){
+        var that = this;
+        utils.loadRes(
+            './data/' + animName + '/texture.png',
+            './data/' + animName + '/texture.js',
+            './data/' + animName + '/skeleton.js',
+            function(textureImage, textureData, skeletonData){
+                var width = 1200;
+                var height = 900;
+                var scale = 0.7;
+                switch(factoryType){
+                    case 'pixi':
+                        that.initArmature(textureImage, textureData, skeletonData, dragonBones.PixiFactory);
+                        that.initForPixi(width, height, scale);
+                        break;
+                    case 'hilo':
+                        that.initArmature(textureImage, textureData, skeletonData, dragonBones.HiloFactory);
+                        that.initForHilo(width, height, scale);
+                        break;
+                    case 'createjs':
+                        that.initArmature(textureImage, textureData, skeletonData, dragonBones.CreatejsFactory);
+                        that.initForCreatejs(width, height, scale);
+                        break;
+                    case 'dom':
+                    default:
+                        that.initArmature(textureImage, textureData, skeletonData, dragonBones.DomFactory);
+                        that.initForDom(width, height, scale);
+                        break;
+                }
+            }
+        );
     },
-    initArmature:function(textureImg, textureData, skeletonData, Factory){
+    initArmature:function(textureImage, textureData, skeletonData, Factory){
         var dragonbonesFactory = this.dragonbonesFactory = new Factory();
-        dragonbonesFactory.addTextureAtlas(new dragonBones.TextureAtlas(textureImg, textureData));
+        dragonbonesFactory.addTextureAtlas(new dragonBones.TextureAtlas(textureImage, textureData));
         dragonbonesFactory.addDragonBonesData(dragonBones.DataParser.parseDragonBonesData(skeletonData));
 
         var armature = this.armature = dragonbonesFactory.buildArmature(skeletonData.armature[0].name);
@@ -38,6 +45,7 @@ var demo = {
         this.play();
     },
     initForPixi:function(gameWidth, gameHeight, scale){
+        console.log('initForPixi');
         var container = this.container = new PIXI.Container();
         var renderer = PIXI.autoDetectRenderer(gameWidth*scale, gameHeight*scale, {
             transparent:true
@@ -58,6 +66,7 @@ var demo = {
         tick();
     },
     initForHilo:function(gameWidth, gameHeight, scale){
+        console.log('initForHilo');
         var stage = this.stage = new Hilo.Stage({
             renderType:'webgl',
             width:gameWidth,
@@ -79,6 +88,7 @@ var demo = {
         ticker.start();
     },
     initForCreatejs:function(gameWidth, gameHeight, scale){
+        console.log('initForCreatejs');
         var canvas = document.createElement('canvas');
         canvas.width = gameWidth * scale;
         canvas.height = gameHeight * scale;
@@ -96,6 +106,7 @@ var demo = {
 
     },
     initForDom:function(gameWidth, gameHeight, scale){
+        console.log('initForDom');
         var armatureDisplay = this.armatureDisplay;
 
         armatureDisplay.style.webkitTransform = 'scale(' + scale + ',' + scale + ') ' + 'translate(' + armatureDisplay.x + 'px,' + armatureDisplay.y + 'px)';
@@ -127,58 +138,9 @@ var demo = {
         var list = this.armature.animation._animationList;
         return list[(this._index++)%list.length];
     },
-    load:function(path){
-        var that = this;
-        var loadNum = 3;
-        var img = new Image;
-        img.onload = onload;
-        img.src = './data/' + path + '/texture.png';
-
-        ['skeleton.js', 'texture.js'].forEach(function(jsName){
-            var scriptElem = document.createElement('script');
-            scriptElem.onload = onload;
-            scriptElem.src = './data/' + path + '/' + jsName;
-            document.body.appendChild(scriptElem);
-        });
-
-        function onload(){
-            loadNum --;
-            if(loadNum === 0){
-                that.init(img, textureData, skeletonData);
-            }
-        }
-    },
-    getUrlKey:function(){
-        var that = this;
-        if(this.keys){
-            return this.keys;
-        }
-
-        var search = location.search.slice(1);
-        this.keys = {};
-        if(search){
-            var arr = search.split('&');
-            arr.forEach(function(kv){
-                var kvs = kv.split('=');
-                if(kvs.length === 2){
-                    that.keys[kvs[0]] = kvs[1];
-                }
-            });
-        }
-        this.keys.type = this.keys.type||'dom';
-        this.keys.anim = this.keys.anim||'dragon';
-
-        return this.keys;
-    },
-    setUrlKey:function(){
-        var search = '?';
-        for(var k in this.keys){
-            search += k + '=' + this.keys[k] + '&';
-        }
-        location.search = search.slice(0, -1);
-    },
     createBtns:function(){
         var that = this;
+        var keys = utils.getUrlKey();
         var factoryTypeBtn = document.createElement('div');
         document.body.appendChild(factoryTypeBtn);
         var factoryTypes = ['dom', 'pixi', 'hilo', 'createjs'];
@@ -189,13 +151,13 @@ var demo = {
             typeElem.style.cssText = 'display:inline;margin-left:10px;line-height:20px;cursor:pointer;height:40px;';
             typeElem.input = typeElem.children[0];
             factoryTypeBtn.appendChild(typeElem);
-            if(type === that.keys.type){
+            if(type === keys.type){
                 typeElem.input.checked = true;
             }
             typeElem.onclick = function(){
-                if(that.keys.type !== type){
-                    that.keys.type = type;
-                    that.setUrlKey();
+                if(keys.type !== type){
+                    keys.type = type;
+                    utils.setUrlKey();
                 }
             }
         });
@@ -204,5 +166,4 @@ var demo = {
 };
 
 demo.bindEvent();
-demo.getUrlKey();
 demo.createBtns();

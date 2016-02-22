@@ -61,47 +61,56 @@
             right: 0px;
         }
 
-        h1 a{
-            text-decoration: none;
-            font-size: 18px;
-            height:34px;
-            line-height: 34px;
-            padding-left: 5px;
-            color: #f96;
-            display: inline-block;
+        #forkMe{
+
         }
     </style>
 </head>
 <body>
-    <h1>click to change animation<a href="https://github.com/06wj/DragonBonesJS">fork me on github</a></h1>
+    <h1>click to change animation <iframe src="https://ghbtns.com/github-btn.html?user=06wj&repo=DragonBonesJS&type=star&count=false&size=large" frameborder="0" scrolling="0" width="160px" height="30px"></iframe></h1>
     <div id='animContainer'></div>
     <ul id='navContainer'></ul>
-    <script src='../build/dragonbones-pixi.min.js'></script>
-    <script src='../build/dragonbones-createjs.min.js'></script>
-    <script src='../build/dragonbones-hilo.min.js'></script>
-    <script src='../build/dragonbones-dom.min.js'></script>
-    <script src='./lib/pixi.min.js'></script>
-    <script src='./lib/hilo.min.js'></script>
-    <script src='./lib/easeljs.min.js'></script>
+    <script src='./utils.js'></script>
     <script src='./demo.js'></script>
     <script>
-        var animDict = {
+        var factoryLib = {
+            pixi:[
+                './lib/pixi.min.js',
+                '../build/dragonbones-pixi.min.js'
+            ],
+            hilo:[
+                './lib/hilo.min.js',
+                '../build/dragonbones-hilo.min.js'
+            ],
+            createjs:[
+                './lib/easeljs.min.js',
+                '../build/dragonbones-createjs.min.js'
+            ],
+            dom:[
+                '../build/dragonbones-dom.min.js'
+            ]
+        };
+
+        var animPosDict = {
             dragon:[550, 550],
             cocos:[500, 800],
             anim:[600, 500],
             spine:[600, 630]
         }
         var animList = [];
-        for(var animName in animDict){
+        for(var animName in animPosDict){
             animList.push(animName);
         }
 
-        var keys = demo.getUrlKey();
+        var keys = utils.getUrlKey();
         var animName = keys.anim;
         var factoryType = keys.type;
 
-        demo.pos = animDict[animName];
-        demo.load(animName);
+        utils.loadScript(factoryLib[factoryType], function(){
+            demo.pos = animPosDict[animName];
+            demo.init(animName);
+        });
+
         (function initNav(){
             var navElem = document.getElementById('navContainer')
             animList.forEach(function(name){
@@ -110,7 +119,7 @@
                 navElem.appendChild(elem);
                 elem.onclick = function(){
                     keys.anim = name;
-                    demo.setUrlKey(keys);
+                    utils.setUrlKey(keys);
                 };
                 if(name === animName){
                     elem.className = 'active';
