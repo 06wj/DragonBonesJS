@@ -144,1340 +144,6 @@ var dragonBones;
 })(dragonBones || (dragonBones = {}));
 var dragonBones;
 (function (dragonBones) {
-    var EventDispatcher = (function (_super) {
-        __extends(EventDispatcher, _super);
-        function EventDispatcher(target) {
-            if (target === void 0) { target = null; }
-            _super.call(this, target);
-        }
-        var d = __define,c=EventDispatcher,p=c.prototype;
-        return EventDispatcher;
-    })(egret.EventDispatcher);
-    dragonBones.EventDispatcher = EventDispatcher;
-    egret.registerClass(EventDispatcher,'dragonBones.EventDispatcher');
-})(dragonBones || (dragonBones = {}));
-var dragonBones;
-(function (dragonBones) {
-    var SoundEventManager = (function (_super) {
-        __extends(SoundEventManager, _super);
-        function SoundEventManager() {
-            _super.call(this);
-            if (SoundEventManager._instance) {
-                throw new Error("Singleton already constructed!");
-            }
-        }
-        var d = __define,c=SoundEventManager,p=c.prototype;
-        SoundEventManager.getInstance = function () {
-            if (!SoundEventManager._instance) {
-                SoundEventManager._instance = new SoundEventManager();
-            }
-            return SoundEventManager._instance;
-        };
-        return SoundEventManager;
-    })(dragonBones.EventDispatcher);
-    dragonBones.SoundEventManager = SoundEventManager;
-    egret.registerClass(SoundEventManager,'dragonBones.SoundEventManager');
-})(dragonBones || (dragonBones = {}));
-var dragonBones;
-(function (dragonBones) {
-    var Armature = (function (_super) {
-        __extends(Armature, _super);
-        function Armature(display) {
-            _super.call(this);
-            this._display = display;
-            this._animation = new dragonBones.Animation(this);
-            this._slotsZOrderChanged = false;
-            this._slotList = [];
-            this._boneList = [];
-            this._eventList = [];
-            this._delayDispose = false;
-            this._lockDispose = false;
-            this._armatureData = null;
-        }
-        var d = __define,c=Armature,p=c.prototype;
-        d(p, "armatureData"
-            ,function () {
-                return this._armatureData;
-            }
-        );
-        d(p, "display"
-            ,function () {
-                return this._display;
-            }
-        );
-        p.getDisplay = function () {
-            return this._display;
-        };
-        d(p, "animation"
-            ,function () {
-                return this._animation;
-            }
-        );
-        p.dispose = function () {
-            this._delayDispose = true;
-            if (!this._animation || this._lockDispose) {
-                return;
-            }
-            this.userData = null;
-            this._animation.dispose();
-            var i = this._slotList.length;
-            while (i--) {
-                this._slotList[i].dispose();
-            }
-            i = this._boneList.length;
-            while (i--) {
-                this._boneList[i].dispose();
-            }
-            this._armatureData = null;
-            this._animation = null;
-            this._slotList = null;
-            this._boneList = null;
-            this._eventList = null;
-        };
-        p.invalidUpdate = function (boneName) {
-            if (boneName === void 0) { boneName = null; }
-            if (boneName) {
-                var bone = this.getBone(boneName);
-                if (bone) {
-                    bone.invalidUpdate();
-                }
-            }
-            else {
-                var i = this._boneList.length;
-                while (i--) {
-                    this._boneList[i].invalidUpdate();
-                }
-            }
-        };
-        p.advanceTime = function (passedTime) {
-            this._lockDispose = true;
-            this._animation._advanceTime(passedTime);
-            passedTime *= this._animation.timeScale;
-            var isFading = this._animation._isFading;
-            var i = this._boneList.length;
-            while (i--) {
-                var bone = this._boneList[i];
-                bone._update(isFading);
-            }
-            i = this._slotList.length;
-            while (i--) {
-                var slot = this._slotList[i];
-                slot._update();
-                if (slot._isShowDisplay) {
-                    var childArmature = slot.childArmature;
-                    if (childArmature) {
-                        childArmature.advanceTime(passedTime);
-                    }
-                }
-            }
-            if (this._slotsZOrderChanged) {
-                this.updateSlotsZOrder();
-                if (this.hasEventListener(dragonBones.ArmatureEvent.Z_ORDER_UPDATED)) {
-                    this.dispatchEvent(new dragonBones.ArmatureEvent(dragonBones.ArmatureEvent.Z_ORDER_UPDATED));
-                }
-            }
-            if (this._eventList.length > 0) {
-                for (var i = 0, len = this._eventList.length; i < len; i++) {
-                    var event = this._eventList[i];
-                    this.dispatchEvent(event);
-                }
-                this._eventList.length = 0;
-            }
-            this._lockDispose = false;
-            if (this._delayDispose) {
-                this.dispose();
-            }
-        };
-        p.resetAnimation = function () {
-            this.animation.stop();
-            this.animation._resetAnimationStateList();
-            for (var i = 0, len = this._boneList.length; i < len; i++) {
-                this._boneList[i]._removeAllStates();
-            }
-        };
-        p.getSlots = function (returnCopy) {
-            if (returnCopy === void 0) { returnCopy = true; }
-            return returnCopy ? this._slotList.concat() : this._slotList;
-        };
-        p.getSlot = function (slotName) {
-            var length = this._slotList.length;
-            for (var i = 0; i < length; i++) {
-                var slot = this._slotList[i];
-                if (slot.name == slotName) {
-                    return slot;
-                }
-            }
-            return null;
-        };
-        p.getSlotByDisplay = function (displayObj) {
-            if (displayObj) {
-                var length = this._slotList.length;
-                for (var i = 0; i < length; i++) {
-                    var slot = this._slotList[i];
-                    if (slot.display == displayObj) {
-                        return slot;
-                    }
-                }
-            }
-            return null;
-        };
-        p.addSlot = function (slot, boneName) {
-            var bone = this.getBone(boneName);
-            if (bone) {
-                bone.addSlot(slot);
-            }
-            else {
-                throw new Error();
-            }
-        };
-        p.removeSlot = function (slot) {
-            if (!slot || slot.armature != this) {
-                throw new Error();
-            }
-            slot.parent.removeSlot(slot);
-        };
-        p.removeSlotByName = function (slotName) {
-            var slot = this.getSlot(slotName);
-            if (slot) {
-                this.removeSlot(slot);
-            }
-            return slot;
-        };
-        p.getBones = function (returnCopy) {
-            if (returnCopy === void 0) { returnCopy = true; }
-            return returnCopy ? this._boneList.concat() : this._boneList;
-        };
-        p.getBone = function (boneName) {
-            var length = this._boneList.length;
-            for (var i = 0; i < length; i++) {
-                var bone = this._boneList[i];
-                if (bone.name == boneName) {
-                    return bone;
-                }
-            }
-            return null;
-        };
-        p.getBoneByDisplay = function (display) {
-            var slot = this.getSlotByDisplay(display);
-            return slot ? slot.parent : null;
-        };
-        p.addBone = function (bone, parentName, updateLater) {
-            if (parentName === void 0) { parentName = null; }
-            if (updateLater === void 0) { updateLater = false; }
-            var parentBone;
-            if (parentName) {
-                parentBone = this.getBone(parentName);
-                if (!parentBone) {
-                    throw new Error();
-                }
-            }
-            if (parentBone) {
-                parentBone.addChildBone(bone, updateLater);
-            }
-            else {
-                if (bone.parent) {
-                    bone.parent.removeChildBone(bone, updateLater);
-                }
-                bone._setArmature(this);
-                if (!updateLater) {
-                    this._updateAnimationAfterBoneListChanged();
-                }
-            }
-        };
-        p.removeBone = function (bone, updateLater) {
-            if (updateLater === void 0) { updateLater = false; }
-            if (!bone || bone.armature != this) {
-                throw new Error();
-            }
-            if (bone.parent) {
-                bone.parent.removeChildBone(bone, updateLater);
-            }
-            else {
-                bone._setArmature(null);
-                if (!updateLater) {
-                    this._updateAnimationAfterBoneListChanged(false);
-                }
-            }
-        };
-        p.removeBoneByName = function (boneName) {
-            var bone = this.getBone(boneName);
-            if (bone) {
-                this.removeBone(bone);
-            }
-            return bone;
-        };
-        p._addBoneToBoneList = function (bone) {
-            if (this._boneList.indexOf(bone) < 0) {
-                this._boneList[this._boneList.length] = bone;
-            }
-        };
-        p._removeBoneFromBoneList = function (bone) {
-            var index = this._boneList.indexOf(bone);
-            if (index >= 0) {
-                this._boneList.splice(index, 1);
-            }
-        };
-        p._addSlotToSlotList = function (slot) {
-            if (this._slotList.indexOf(slot) < 0) {
-                this._slotList[this._slotList.length] = slot;
-            }
-        };
-        p._removeSlotFromSlotList = function (slot) {
-            var index = this._slotList.indexOf(slot);
-            if (index >= 0) {
-                this._slotList.splice(index, 1);
-            }
-        };
-        p.updateSlotsZOrder = function () {
-            this._slotList.sort(this.sortSlot);
-            var i = this._slotList.length;
-            while (i--) {
-                var slot = this._slotList[i];
-                if (slot._isShowDisplay) {
-                    slot._addDisplayToContainer(this._display);
-                }
-            }
-            this._slotsZOrderChanged = false;
-        };
-        p._updateAnimationAfterBoneListChanged = function (ifNeedSortBoneList) {
-            if (ifNeedSortBoneList === void 0) { ifNeedSortBoneList = true; }
-            if (ifNeedSortBoneList) {
-                this.sortBoneList();
-            }
-            this._animation._updateAnimationStates();
-        };
-        p.sortBoneList = function () {
-            var i = this._boneList.length;
-            if (i == 0) {
-                return;
-            }
-            var helpArray = [];
-            while (i--) {
-                var level = 0;
-                var bone = this._boneList[i];
-                var boneParent = bone;
-                while (boneParent) {
-                    level++;
-                    boneParent = boneParent.parent;
-                }
-                helpArray[i] = [level, bone];
-            }
-            helpArray.sort(dragonBones.ArmatureData.sortBoneDataHelpArrayDescending);
-            i = helpArray.length;
-            while (i--) {
-                this._boneList[i] = helpArray[i][1];
-            }
-            helpArray.length = 0;
-        };
-        p._arriveAtFrame = function (frame, timelineState, animationState, isCross) {
-            if (frame.event && this.hasEventListener(dragonBones.FrameEvent.ANIMATION_FRAME_EVENT)) {
-                var frameEvent = new dragonBones.FrameEvent(dragonBones.FrameEvent.ANIMATION_FRAME_EVENT);
-                frameEvent.animationState = animationState;
-                frameEvent.frameLabel = frame.event;
-                this._eventList.push(frameEvent);
-            }
-            if (frame.sound && Armature._soundManager.hasEventListener(dragonBones.SoundEvent.SOUND)) {
-                var soundEvent = new dragonBones.SoundEvent(dragonBones.SoundEvent.SOUND);
-                soundEvent.armature = this;
-                soundEvent.animationState = animationState;
-                soundEvent.sound = frame.sound;
-                Armature._soundManager.dispatchEvent(soundEvent);
-            }
-            if (frame.action) {
-                if (animationState.displayControl) {
-                    this.animation.gotoAndPlay(frame.action);
-                }
-            }
-        };
-        p.sortSlot = function (slot1, slot2) {
-            return slot1.zOrder < slot2.zOrder ? 1 : -1;
-        };
-        p.getAnimation = function () {
-            return this._animation;
-        };
-        Armature._soundManager = dragonBones.SoundEventManager.getInstance();
-        return Armature;
-    })(dragonBones.EventDispatcher);
-    dragonBones.Armature = Armature;
-    egret.registerClass(Armature,'dragonBones.Armature',["dragonBones.IAnimatable"]);
-})(dragonBones || (dragonBones = {}));
-var dragonBones;
-(function (dragonBones) {
-    var Matrix = (function () {
-        function Matrix() {
-            this.a = 1;
-            this.b = 0;
-            this.c = 0;
-            this.d = 1;
-            this.tx = 0;
-            this.ty = 0;
-        }
-        var d = __define,c=Matrix,p=c.prototype;
-        p.invert = function () {
-            var a1 = this.a;
-            var b1 = this.b;
-            var c1 = this.c;
-            var d1 = this.d;
-            var tx1 = this.tx;
-            var n = a1 * d1 - b1 * c1;
-            this.a = d1 / n;
-            this.b = -b1 / n;
-            this.c = -c1 / n;
-            this.d = a1 / n;
-            this.tx = (c1 * this.ty - d1 * tx1) / n;
-            this.ty = -(a1 * this.ty - b1 * tx1) / n;
-        };
-        p.concat = function (m) {
-            var ma = m.a;
-            var mb = m.b;
-            var mc = m.c;
-            var md = m.d;
-            var tx1 = this.tx;
-            var ty1 = this.ty;
-            if (ma != 1 || mb != 0 || mc != 0 || md != 1) {
-                var a1 = this.a;
-                var b1 = this.b;
-                var c1 = this.c;
-                var d1 = this.d;
-                this.a = a1 * ma + b1 * mc;
-                this.b = a1 * mb + b1 * md;
-                this.c = c1 * ma + d1 * mc;
-                this.d = c1 * mb + d1 * md;
-            }
-            this.tx = tx1 * ma + ty1 * mc + m.tx;
-            this.ty = tx1 * mb + ty1 * md + m.ty;
-        };
-        p.copyFrom = function (m) {
-            this.tx = m.tx;
-            this.ty = m.ty;
-            this.a = m.a;
-            this.b = m.b;
-            this.c = m.c;
-            this.d = m.d;
-        };
-        return Matrix;
-    })();
-    dragonBones.Matrix = Matrix;
-    egret.registerClass(Matrix,'dragonBones.Matrix');
-})(dragonBones || (dragonBones = {}));
-var dragonBones;
-(function (dragonBones) {
-    var DBTransform = (function () {
-        function DBTransform() {
-            this.x = 0;
-            this.y = 0;
-            this.skewX = 0;
-            this.skewY = 0;
-            this.scaleX = 1;
-            this.scaleY = 1;
-        }
-        var d = __define,c=DBTransform,p=c.prototype;
-        d(p, "rotation"
-            ,function () {
-                return this.skewX;
-            }
-            ,function (value) {
-                this.skewX = this.skewY = value;
-            }
-        );
-        p.copy = function (transform) {
-            this.x = transform.x;
-            this.y = transform.y;
-            this.skewX = transform.skewX;
-            this.skewY = transform.skewY;
-            this.scaleX = transform.scaleX;
-            this.scaleY = transform.scaleY;
-        };
-        p.add = function (transform) {
-            this.x += transform.x;
-            this.y += transform.y;
-            this.skewX += transform.skewX;
-            this.skewY += transform.skewY;
-            this.scaleX *= transform.scaleX;
-            this.scaleY *= transform.scaleY;
-        };
-        p.minus = function (transform) {
-            this.x -= transform.x;
-            this.y -= transform.y;
-            this.skewX -= transform.skewX;
-            this.skewY -= transform.skewY;
-            this.scaleX /= transform.scaleX;
-            this.scaleY /= transform.scaleY;
-        };
-        p.normalizeRotation = function () {
-            this.skewX = dragonBones.TransformUtil.normalizeRotation(this.skewX);
-            this.skewY = dragonBones.TransformUtil.normalizeRotation(this.skewY);
-        };
-        p.toString = function () {
-            var string = "x:" + this.x + " y:" + this.y + " skewX:" + this.skewX + " skewY:" + this.skewY + " scaleX:" + this.scaleX + " scaleY:" + this.scaleY;
-            return string;
-        };
-        return DBTransform;
-    })();
-    dragonBones.DBTransform = DBTransform;
-    egret.registerClass(DBTransform,'dragonBones.DBTransform');
-})(dragonBones || (dragonBones = {}));
-var dragonBones;
-(function (dragonBones) {
-    var DBObject = (function () {
-        function DBObject() {
-            this._globalTransformMatrix = new dragonBones.Matrix();
-            this._global = new dragonBones.DBTransform();
-            this._origin = new dragonBones.DBTransform();
-            this._offset = new dragonBones.DBTransform();
-            this._offset.scaleX = this._offset.scaleY = 1;
-            this._visible = true;
-            this._armature = null;
-            this._parent = null;
-            this.userData = null;
-            this.inheritRotation = true;
-            this.inheritScale = true;
-            this.inheritTranslation = true;
-        }
-        var d = __define,c=DBObject,p=c.prototype;
-        d(p, "global"
-            ,function () {
-                return this._global;
-            }
-        );
-        d(p, "origin"
-            ,function () {
-                return this._origin;
-            }
-        );
-        d(p, "offset"
-            ,function () {
-                return this._offset;
-            }
-        );
-        d(p, "armature"
-            ,function () {
-                return this._armature;
-            }
-        );
-        p._setArmature = function (value) {
-            this._armature = value;
-        };
-        d(p, "parent"
-            ,function () {
-                return this._parent;
-            }
-        );
-        p._setParent = function (value) {
-            this._parent = value;
-        };
-        p.dispose = function () {
-            this.userData = null;
-            this._globalTransformMatrix = null;
-            this._global = null;
-            this._origin = null;
-            this._offset = null;
-            this._armature = null;
-            this._parent = null;
-        };
-        p._calculateRelativeParentTransform = function () {
-        };
-        p._calculateParentTransform = function () {
-            if (this.parent && (this.inheritTranslation || this.inheritRotation || this.inheritScale)) {
-                var parentGlobalTransform = this._parent._globalTransformForChild;
-                var parentGlobalTransformMatrix = this._parent._globalTransformMatrixForChild;
-                if (!this.inheritTranslation || !this.inheritRotation || !this.inheritScale) {
-                    parentGlobalTransform = DBObject._tempParentGlobalTransform;
-                    parentGlobalTransform.copy(this._parent._globalTransformForChild);
-                    if (!this.inheritTranslation) {
-                        parentGlobalTransform.x = 0;
-                        parentGlobalTransform.y = 0;
-                    }
-                    if (!this.inheritScale) {
-                        parentGlobalTransform.scaleX = 1;
-                        parentGlobalTransform.scaleY = 1;
-                    }
-                    if (!this.inheritRotation) {
-                        parentGlobalTransform.skewX = 0;
-                        parentGlobalTransform.skewY = 0;
-                    }
-                    parentGlobalTransformMatrix = DBObject._tempParentGlobalTransformMatrix;
-                    dragonBones.TransformUtil.transformToMatrix(parentGlobalTransform, parentGlobalTransformMatrix, true);
-                }
-                return { parentGlobalTransform: parentGlobalTransform, parentGlobalTransformMatrix: parentGlobalTransformMatrix };
-            }
-            return null;
-        };
-        p._updateGlobal = function () {
-            this._calculateRelativeParentTransform();
-            var output = this._calculateParentTransform();
-            if (output != null) {
-                var parentMatrix = output.parentGlobalTransformMatrix;
-                var parentGlobalTransform = output.parentGlobalTransform;
-                var x = this._global.x;
-                var y = this._global.y;
-                this._global.x = parentMatrix.a * x + parentMatrix.c * y + parentMatrix.tx;
-                this._global.y = parentMatrix.d * y + parentMatrix.b * x + parentMatrix.ty;
-                if (this.inheritRotation) {
-                    this._global.skewX += parentGlobalTransform.skewX;
-                    this._global.skewY += parentGlobalTransform.skewY;
-                }
-                if (this.inheritScale) {
-                    this._global.scaleX *= parentGlobalTransform.scaleX;
-                    this._global.scaleY *= parentGlobalTransform.scaleY;
-                }
-            }
-            dragonBones.TransformUtil.transformToMatrix(this._global, this._globalTransformMatrix, true);
-            return output;
-        };
-        DBObject._tempParentGlobalTransformMatrix = new dragonBones.Matrix();
-        DBObject._tempParentGlobalTransform = new dragonBones.DBTransform();
-        return DBObject;
-    })();
-    dragonBones.DBObject = DBObject;
-    egret.registerClass(DBObject,'dragonBones.DBObject');
-})(dragonBones || (dragonBones = {}));
-var dragonBones;
-(function (dragonBones) {
-    var Bone = (function (_super) {
-        __extends(Bone, _super);
-        function Bone() {
-            _super.call(this);
-            this.applyOffsetTranslationToChild = true;
-            this.applyOffsetRotationToChild = true;
-            this.applyOffsetScaleToChild = false;
-            this._needUpdate = 0;
-            this._tween = new dragonBones.DBTransform();
-            this._tweenPivot = new dragonBones.Point();
-            this._tween.scaleX = this._tween.scaleY = 1;
-            this._boneList = [];
-            this._slotList = [];
-            this._timelineStateList = [];
-            this._needUpdate = 2;
-            this._isColorChanged = false;
-        }
-        var d = __define,c=Bone,p=c.prototype;
-        Bone.initWithBoneData = function (boneData) {
-            var outputBone = new Bone();
-            outputBone.name = boneData.name;
-            outputBone.inheritRotation = boneData.inheritRotation;
-            outputBone.inheritScale = boneData.inheritScale;
-            outputBone.origin.copy(boneData.transform);
-            return outputBone;
-        };
-        p.dispose = function () {
-            if (!this._boneList) {
-                return;
-            }
-            _super.prototype.dispose.call(this);
-            var i = this._boneList.length;
-            while (i--) {
-                this._boneList[i].dispose();
-            }
-            i = this._slotList.length;
-            while (i--) {
-                this._slotList[i].dispose();
-            }
-            this._tween = null;
-            this._tweenPivot = null;
-            this._boneList = null;
-            this._slotList = null;
-            this._timelineStateList = null;
-        };
-        p.contains = function (child) {
-            if (!child) {
-                throw new Error();
-            }
-            if (child == this) {
-                return false;
-            }
-            var ancestor = child;
-            while (!(ancestor == this || ancestor == null)) {
-                ancestor = ancestor.parent;
-            }
-            return ancestor == this;
-        };
-        p.addChildBone = function (childBone, updateLater) {
-            if (updateLater === void 0) { updateLater = false; }
-            if (!childBone) {
-                throw new Error();
-            }
-            if (childBone == this || childBone.contains(this)) {
-                throw new Error();
-            }
-            if (childBone.parent == this) {
-                return;
-            }
-            if (childBone.parent) {
-                childBone.parent.removeChildBone(childBone, updateLater);
-            }
-            this._boneList[this._boneList.length] = childBone;
-            childBone._setParent(this);
-            childBone._setArmature(this._armature);
-            if (this._armature && !updateLater) {
-                this._armature._updateAnimationAfterBoneListChanged();
-            }
-        };
-        p.removeChildBone = function (childBone, updateLater) {
-            if (updateLater === void 0) { updateLater = false; }
-            if (!childBone) {
-                throw new Error();
-            }
-            var index = this._boneList.indexOf(childBone);
-            if (index < 0) {
-                throw new Error();
-            }
-            this._boneList.splice(index, 1);
-            childBone._setParent(null);
-            childBone._setArmature(null);
-            if (this._armature && !updateLater) {
-                this._armature._updateAnimationAfterBoneListChanged(false);
-            }
-        };
-        p.addSlot = function (childSlot) {
-            if (!childSlot) {
-                throw new Error();
-            }
-            if (childSlot.parent) {
-                childSlot.parent.removeSlot(childSlot);
-            }
-            this._slotList[this._slotList.length] = childSlot;
-            childSlot._setParent(this);
-            childSlot.setArmature(this._armature);
-        };
-        p.removeSlot = function (childSlot) {
-            if (!childSlot) {
-                throw new Error();
-            }
-            var index = this._slotList.indexOf(childSlot);
-            if (index < 0) {
-                throw new Error();
-            }
-            this._slotList.splice(index, 1);
-            childSlot._setParent(null);
-            childSlot.setArmature(null);
-        };
-        p._setArmature = function (value) {
-            if (this._armature == value) {
-                return;
-            }
-            if (this._armature) {
-                this._armature._removeBoneFromBoneList(this);
-                this._armature._updateAnimationAfterBoneListChanged(false);
-            }
-            this._armature = value;
-            if (this._armature) {
-                this._armature._addBoneToBoneList(this);
-            }
-            var i = this._boneList.length;
-            while (i--) {
-                this._boneList[i]._setArmature(this._armature);
-            }
-            i = this._slotList.length;
-            while (i--) {
-                this._slotList[i].setArmature(this._armature);
-            }
-        };
-        p.getBones = function (returnCopy) {
-            if (returnCopy === void 0) { returnCopy = true; }
-            return returnCopy ? this._boneList.concat() : this._boneList;
-        };
-        p.getSlots = function (returnCopy) {
-            if (returnCopy === void 0) { returnCopy = true; }
-            return returnCopy ? this._slotList.concat() : this._slotList;
-        };
-        p.invalidUpdate = function () {
-            this._needUpdate = 2;
-        };
-        p._calculateRelativeParentTransform = function () {
-            this._global.scaleX = this._origin.scaleX * this._tween.scaleX * this._offset.scaleX;
-            this._global.scaleY = this._origin.scaleY * this._tween.scaleY * this._offset.scaleY;
-            this._global.skewX = this._origin.skewX + this._tween.skewX + this._offset.skewX;
-            this._global.skewY = this._origin.skewY + this._tween.skewY + this._offset.skewY;
-            this._global.x = this._origin.x + this._tween.x + this._offset.x;
-            this._global.y = this._origin.y + this._tween.y + this._offset.y;
-        };
-        p._update = function (needUpdate) {
-            if (needUpdate === void 0) { needUpdate = false; }
-            this._needUpdate--;
-            if (needUpdate || this._needUpdate > 0 || (this._parent && this._parent._needUpdate > 0)) {
-                this._needUpdate = 1;
-            }
-            else {
-                return;
-            }
-            this.blendingTimeline();
-            var result = this._updateGlobal();
-            var parentGlobalTransform = result ? result.parentGlobalTransform : null;
-            var parentGlobalTransformMatrix = result ? result.parentGlobalTransformMatrix : null;
-            var ifExistOffsetTranslation = this._offset.x != 0 || this._offset.y != 0;
-            var ifExistOffsetScale = this._offset.scaleX != 0 || this._offset.scaleY != 0;
-            var ifExistOffsetRotation = this._offset.skewX != 0 || this._offset.skewY != 0;
-            if ((!ifExistOffsetTranslation || this.applyOffsetTranslationToChild) &&
-                (!ifExistOffsetScale || this.applyOffsetScaleToChild) &&
-                (!ifExistOffsetRotation || this.applyOffsetRotationToChild)) {
-                this._globalTransformForChild = this._global;
-                this._globalTransformMatrixForChild = this._globalTransformMatrix;
-            }
-            else {
-                if (!this._tempGlobalTransformForChild) {
-                    this._tempGlobalTransformForChild = new dragonBones.DBTransform();
-                }
-                this._globalTransformForChild = this._tempGlobalTransformForChild;
-                if (!this._tempGlobalTransformMatrixForChild) {
-                    this._tempGlobalTransformMatrixForChild = new dragonBones.Matrix();
-                }
-                this._globalTransformMatrixForChild = this._tempGlobalTransformMatrixForChild;
-                this._globalTransformForChild.x = this._origin.x + this._tween.x;
-                this._globalTransformForChild.y = this._origin.y + this._tween.y;
-                this._globalTransformForChild.scaleX = this._origin.scaleX * this._tween.scaleX;
-                this._globalTransformForChild.scaleY = this._origin.scaleY * this._tween.scaleY;
-                this._globalTransformForChild.skewX = this._origin.skewX + this._tween.skewX;
-                this._globalTransformForChild.skewY = this._origin.skewY + this._tween.skewY;
-                if (this.applyOffsetTranslationToChild) {
-                    this._globalTransformForChild.x += this._offset.x;
-                    this._globalTransformForChild.y += this._offset.y;
-                }
-                if (this.applyOffsetScaleToChild) {
-                    this._globalTransformForChild.scaleX *= this._offset.scaleX;
-                    this._globalTransformForChild.scaleY *= this._offset.scaleY;
-                }
-                if (this.applyOffsetRotationToChild) {
-                    this._globalTransformForChild.skewX += this._offset.skewX;
-                    this._globalTransformForChild.skewY += this._offset.skewY;
-                }
-                dragonBones.TransformUtil.transformToMatrix(this._globalTransformForChild, this._globalTransformMatrixForChild, true);
-                if (parentGlobalTransformMatrix) {
-                    this._globalTransformMatrixForChild.concat(parentGlobalTransformMatrix);
-                    dragonBones.TransformUtil.matrixToTransform(this._globalTransformMatrixForChild, this._globalTransformForChild, this._globalTransformForChild.scaleX * parentGlobalTransform.scaleX >= 0, this._globalTransformForChild.scaleY * parentGlobalTransform.scaleY >= 0);
-                }
-            }
-        };
-        p._updateColor = function (aOffset, rOffset, gOffset, bOffset, aMultiplier, rMultiplier, gMultiplier, bMultiplier, colorChanged) {
-            var length = this._slotList.length;
-            for (var i = 0; i < length; i++) {
-                var childSlot = this._slotList[i];
-                childSlot._updateDisplayColor(aOffset, rOffset, gOffset, bOffset, aMultiplier, rMultiplier, gMultiplier, bMultiplier);
-            }
-            this._isColorChanged = colorChanged;
-        };
-        p._hideSlots = function () {
-            var length = this._slotList.length;
-            for (var i = 0; i < length; i++) {
-                var childSlot = this._slotList[i];
-                childSlot._changeDisplay(-1);
-            }
-        };
-        p._arriveAtFrame = function (frame, timelineState, animationState, isCross) {
-            var displayControl = animationState.displayControl &&
-                (!this.displayController || this.displayController == animationState.name) &&
-                animationState.containsBoneMask(this.name);
-            if (displayControl) {
-                var tansformFrame = frame;
-                var displayIndex = tansformFrame.displayIndex;
-                var childSlot;
-                if (frame.event && this._armature.hasEventListener(dragonBones.FrameEvent.BONE_FRAME_EVENT)) {
-                    var frameEvent = new dragonBones.FrameEvent(dragonBones.FrameEvent.BONE_FRAME_EVENT);
-                    frameEvent.bone = this;
-                    frameEvent.animationState = animationState;
-                    frameEvent.frameLabel = frame.event;
-                    this._armature._eventList.push(frameEvent);
-                }
-                if (frame.sound && Bone._soundManager.hasEventListener(dragonBones.SoundEvent.SOUND)) {
-                    var soundEvent = new dragonBones.SoundEvent(dragonBones.SoundEvent.SOUND);
-                    soundEvent.armature = this._armature;
-                    soundEvent.animationState = animationState;
-                    soundEvent.sound = frame.sound;
-                    Bone._soundManager.dispatchEvent(soundEvent);
-                }
-                if (frame.action) {
-                    var length1 = this._slotList.length;
-                    for (var i1 = 0; i1 < length1; i1++) {
-                        childSlot = this._slotList[i1];
-                        var childArmature = childSlot.childArmature;
-                        if (childArmature) {
-                            childArmature.animation.gotoAndPlay(frame.action);
-                        }
-                    }
-                }
-            }
-        };
-        p._addState = function (timelineState) {
-            if (this._timelineStateList.indexOf(timelineState) < 0) {
-                this._timelineStateList.push(timelineState);
-                this._timelineStateList.sort(this.sortState);
-            }
-        };
-        p._removeState = function (timelineState) {
-            var index = this._timelineStateList.indexOf(timelineState);
-            if (index >= 0) {
-                this._timelineStateList.splice(index, 1);
-            }
-        };
-        p._removeAllStates = function () {
-            this._timelineStateList.length = 0;
-        };
-        p.blendingTimeline = function () {
-            var timelineState;
-            var transform;
-            var pivot;
-            var weight;
-            var i = this._timelineStateList.length;
-            if (i == 1) {
-                timelineState = this._timelineStateList[0];
-                weight = timelineState._animationState.weight * timelineState._animationState.fadeWeight;
-                timelineState._weight = weight;
-                transform = timelineState._transform;
-                pivot = timelineState._pivot;
-                this._tween.x = transform.x * weight;
-                this._tween.y = transform.y * weight;
-                this._tween.skewX = transform.skewX * weight;
-                this._tween.skewY = transform.skewY * weight;
-                this._tween.scaleX = 1 + (transform.scaleX - 1) * weight;
-                this._tween.scaleY = 1 + (transform.scaleY - 1) * weight;
-                this._tweenPivot.x = pivot.x * weight;
-                this._tweenPivot.y = pivot.y * weight;
-            }
-            else if (i > 1) {
-                var x = 0;
-                var y = 0;
-                var skewX = 0;
-                var skewY = 0;
-                var scaleX = 1;
-                var scaleY = 1;
-                var pivotX = 0;
-                var pivotY = 0;
-                var weigthLeft = 1;
-                var layerTotalWeight = 0;
-                var prevLayer = this._timelineStateList[i - 1]._animationState.layer;
-                var currentLayer = 0;
-                while (i--) {
-                    timelineState = this._timelineStateList[i];
-                    currentLayer = timelineState._animationState.layer;
-                    if (prevLayer != currentLayer) {
-                        if (layerTotalWeight >= weigthLeft) {
-                            timelineState._weight = 0;
-                            break;
-                        }
-                        else {
-                            weigthLeft -= layerTotalWeight;
-                        }
-                    }
-                    prevLayer = currentLayer;
-                    weight = timelineState._animationState.weight * timelineState._animationState.fadeWeight * weigthLeft;
-                    timelineState._weight = weight;
-                    if (weight) {
-                        transform = timelineState._transform;
-                        pivot = timelineState._pivot;
-                        x += transform.x * weight;
-                        y += transform.y * weight;
-                        skewX += transform.skewX * weight;
-                        skewY += transform.skewY * weight;
-                        scaleX += (transform.scaleX - 1) * weight;
-                        scaleY += (transform.scaleY - 1) * weight;
-                        pivotX += pivot.x * weight;
-                        pivotY += pivot.y * weight;
-                        layerTotalWeight += weight;
-                    }
-                }
-                this._tween.x = x;
-                this._tween.y = y;
-                this._tween.skewX = skewX;
-                this._tween.skewY = skewY;
-                this._tween.scaleX = scaleX;
-                this._tween.scaleY = scaleY;
-                this._tweenPivot.x = pivotX;
-                this._tweenPivot.y = pivotY;
-            }
-        };
-        p.sortState = function (state1, state2) {
-            return state1._animationState.layer < state2._animationState.layer ? -1 : 1;
-        };
-        d(p, "childArmature"
-            ,function () {
-                if (this.slot) {
-                    return this.slot.childArmature;
-                }
-                return null;
-            }
-        );
-        d(p, "display"
-            ,function () {
-                if (this.slot) {
-                    return this.slot.display;
-                }
-                return null;
-            }
-            ,function (value) {
-                if (this.slot) {
-                    this.slot.display = value;
-                }
-            }
-        );
-        d(p, "node"
-            ,function () {
-                return this._offset;
-            }
-        );
-        d(p, "visible",undefined
-            ,function (value) {
-                if (this._visible != value) {
-                    this._visible = value;
-                    var length = this._slotList.length;
-                    for (var i = 0; i < length; i++) {
-                        var childSlot = this._slotList[i];
-                        childSlot._updateDisplayVisible(this._visible);
-                    }
-                }
-            }
-        );
-        d(p, "slot"
-            ,function () {
-                return this._slotList.length > 0 ? this._slotList[0] : null;
-            }
-        );
-        Bone._soundManager = dragonBones.SoundEventManager.getInstance();
-        return Bone;
-    })(dragonBones.DBObject);
-    dragonBones.Bone = Bone;
-    egret.registerClass(Bone,'dragonBones.Bone');
-})(dragonBones || (dragonBones = {}));
-var dragonBones;
-(function (dragonBones) {
-    var Slot = (function (_super) {
-        __extends(Slot, _super);
-        function Slot(self) {
-            _super.call(this);
-            this._currentDisplayIndex = 0;
-            if (self != this) {
-                throw new Error(egret.getString(4001));
-            }
-            this._displayList = [];
-            this._timelineStateList = [];
-            this._currentDisplayIndex = -1;
-            this._originZOrder = 0;
-            this._tweenZOrder = 0;
-            this._offsetZOrder = 0;
-            this._isShowDisplay = false;
-            this._colorTransform = new dragonBones.ColorTransform();
-            this._displayDataList = null;
-            this._currentDisplay = null;
-            this.inheritRotation = true;
-            this.inheritScale = true;
-        }
-        var d = __define,c=Slot,p=c.prototype;
-        p.initWithSlotData = function (slotData) {
-            this.name = slotData.name;
-            this.blendMode = slotData.blendMode;
-            this._originZOrder = slotData.zOrder;
-            this._displayDataList = slotData.displayDataList;
-            this._originDisplayIndex = slotData.displayIndex;
-        };
-        p.dispose = function () {
-            if (!this._displayList) {
-                return;
-            }
-            _super.prototype.dispose.call(this);
-            this._displayList.length = 0;
-            this._displayDataList = null;
-            this._displayList = null;
-            this._currentDisplay = null;
-        };
-        p.sortState = function (state1, state2) {
-            return state1._animationState.layer < state2._animationState.layer ? -1 : 1;
-        };
-        p._addState = function (timelineState) {
-            if (this._timelineStateList.indexOf(timelineState) < 0) {
-                this._timelineStateList.push(timelineState);
-                this._timelineStateList.sort(this.sortState);
-            }
-        };
-        p._removeState = function (timelineState) {
-            var index = this._timelineStateList.indexOf(timelineState);
-            if (index >= 0) {
-                this._timelineStateList.splice(index, 1);
-            }
-        };
-        p.setArmature = function (value) {
-            if (this._armature == value) {
-                return;
-            }
-            if (this._armature) {
-                this._armature._removeSlotFromSlotList(this);
-            }
-            this._armature = value;
-            if (this._armature) {
-                this._armature._addSlotToSlotList(this);
-                this._armature._slotsZOrderChanged = true;
-                this._addDisplayToContainer(this._armature.display);
-            }
-            else {
-                this._removeDisplayFromContainer();
-            }
-        };
-        p._update = function () {
-            if (this._parent._needUpdate <= 0 && !this._needUpdate) {
-                return;
-            }
-            this._updateGlobal();
-            this._updateTransform();
-            this._needUpdate = false;
-        };
-        p._calculateRelativeParentTransform = function () {
-            this._global.scaleX = this._origin.scaleX * this._offset.scaleX;
-            this._global.scaleY = this._origin.scaleY * this._offset.scaleY;
-            this._global.skewX = this._origin.skewX + this._offset.skewX;
-            this._global.skewY = this._origin.skewY + this._offset.skewY;
-            this._global.x = this._origin.x + this._offset.x + this._parent._tweenPivot.x;
-            this._global.y = this._origin.y + this._offset.y + this._parent._tweenPivot.y;
-        };
-        p.updateChildArmatureAnimation = function () {
-            if (this.childArmature) {
-                if (this._isShowDisplay) {
-                    if (this._armature &&
-                        this._armature.animation.lastAnimationState &&
-                        this.childArmature.animation.hasAnimation(this._armature.animation.lastAnimationState.name)) {
-                        this.childArmature.animation.gotoAndPlay(this._armature.animation.lastAnimationState.name);
-                    }
-                    else {
-                        this.childArmature.animation.play();
-                    }
-                }
-                else {
-                    this.childArmature.animation.stop();
-                    this.childArmature.animation._lastAnimationState = null;
-                }
-            }
-        };
-        p._changeDisplay = function (displayIndex) {
-            if (displayIndex === void 0) { displayIndex = 0; }
-            if (displayIndex < 0) {
-                if (this._isShowDisplay) {
-                    this._isShowDisplay = false;
-                    this._removeDisplayFromContainer();
-                    this.updateChildArmatureAnimation();
-                }
-            }
-            else if (this._displayList.length > 0) {
-                var length = this._displayList.length;
-                if (displayIndex >= length) {
-                    displayIndex = length - 1;
-                }
-                if (this._currentDisplayIndex != displayIndex) {
-                    this._isShowDisplay = true;
-                    this._currentDisplayIndex = displayIndex;
-                    this._updateSlotDisplay();
-                    this.updateChildArmatureAnimation();
-                    if (this._displayDataList &&
-                        this._displayDataList.length > 0 &&
-                        this._currentDisplayIndex < this._displayDataList.length) {
-                        this._origin.copy(this._displayDataList[this._currentDisplayIndex].transform);
-                    }
-                    this._needUpdate = true;
-                }
-                else if (!this._isShowDisplay) {
-                    this._isShowDisplay = true;
-                    if (this._armature) {
-                        this._armature._slotsZOrderChanged = true;
-                        this._addDisplayToContainer(this._armature.display);
-                    }
-                    this.updateChildArmatureAnimation();
-                }
-            }
-        };
-        p._updateSlotDisplay = function () {
-            var currentDisplayIndex = -1;
-            if (this._currentDisplay) {
-                currentDisplayIndex = this._getDisplayIndex();
-                this._removeDisplayFromContainer();
-            }
-            var displayObj = this._displayList[this._currentDisplayIndex];
-            if (displayObj) {
-                if (displayObj instanceof dragonBones.Armature) {
-                    this._currentDisplay = displayObj.display;
-                }
-                else {
-                    this._currentDisplay = displayObj;
-                }
-            }
-            else {
-                this._currentDisplay = null;
-            }
-            this._updateDisplay(this._currentDisplay);
-            if (this._currentDisplay) {
-                if (this._armature && this._isShowDisplay) {
-                    if (currentDisplayIndex < 0) {
-                        this._armature._slotsZOrderChanged = true;
-                        this._addDisplayToContainer(this._armature.display);
-                    }
-                    else {
-                        this._addDisplayToContainer(this._armature.display, currentDisplayIndex);
-                    }
-                }
-                this._updateDisplayBlendMode(this._blendMode);
-                this._updateDisplayColor(this._colorTransform.alphaOffset, this._colorTransform.redOffset, this._colorTransform.greenOffset, this._colorTransform.blueOffset, this._colorTransform.alphaMultiplier, this._colorTransform.redMultiplier, this._colorTransform.greenMultiplier, this._colorTransform.blueMultiplier, true);
-                this._updateDisplayVisible(this._visible);
-                this._updateTransform();
-            }
-        };
-        d(p, "visible",undefined
-            ,function (value) {
-                if (this._visible != value) {
-                    this._visible = value;
-                    this._updateDisplayVisible(this._visible);
-                }
-            }
-        );
-        d(p, "displayList"
-            ,function () {
-                return this._displayList;
-            }
-            ,function (value) {
-                if (!value) {
-                    throw new Error();
-                }
-                if (this._currentDisplayIndex < 0) {
-                    this._currentDisplayIndex = 0;
-                }
-                var i = this._displayList.length = value.length;
-                while (i--) {
-                    this._displayList[i] = value[i];
-                }
-                var displayIndexBackup = this._currentDisplayIndex;
-                this._currentDisplayIndex = -1;
-                this._changeDisplay(displayIndexBackup);
-            }
-        );
-        d(p, "display"
-            ,function () {
-                return this._currentDisplay;
-            }
-            ,function (value) {
-                if (this._currentDisplayIndex < 0) {
-                    this._currentDisplayIndex = 0;
-                }
-                if (this._displayList[this._currentDisplayIndex] == value) {
-                    return;
-                }
-                this._displayList[this._currentDisplayIndex] = value;
-                this._updateSlotDisplay();
-                this.updateChildArmatureAnimation();
-                this._updateTransform();
-            }
-        );
-        p.getDisplay = function () {
-            return this.display;
-        };
-        p.setDisplay = function (value) {
-            this.display = value;
-        };
-        d(p, "childArmature"
-            ,function () {
-                if (this._displayList[this._currentDisplayIndex] instanceof dragonBones.Armature) {
-                    return (this._displayList[this._currentDisplayIndex]);
-                }
-                return null;
-            }
-            ,function (value) {
-                this.display = value;
-            }
-        );
-        d(p, "zOrder"
-            ,function () {
-                return this._originZOrder + this._tweenZOrder + this._offsetZOrder;
-            }
-            ,function (value) {
-                if (this.zOrder != value) {
-                    this._offsetZOrder = value - this._originZOrder - this._tweenZOrder;
-                    if (this._armature) {
-                        this._armature._slotsZOrderChanged = true;
-                    }
-                }
-            }
-        );
-        d(p, "blendMode"
-            ,function () {
-                return this._blendMode;
-            }
-            ,function (value) {
-                if (this._blendMode != value) {
-                    this._blendMode = value;
-                    this._updateDisplayBlendMode(this._blendMode);
-                }
-            }
-        );
-        p._updateDisplay = function (value) {
-            throw new Error("");
-        };
-        p._getDisplayIndex = function () {
-            throw new Error(egret.getString(4001));
-        };
-        p._addDisplayToContainer = function (container, index) {
-            if (index === void 0) { index = -1; }
-            throw new Error(egret.getString(4001));
-        };
-        p._removeDisplayFromContainer = function () {
-            throw new Error(egret.getString(4001));
-        };
-        p._updateTransform = function () {
-            throw new Error(egret.getString(4001));
-        };
-        p._updateDisplayVisible = function (value) {
-            throw new Error(egret.getString(4001));
-        };
-        p._updateDisplayColor = function (aOffset, rOffset, gOffset, bOffset, aMultiplier, rMultiplier, gMultiplier, bMultiplier, colorChanged) {
-            if (colorChanged === void 0) { colorChanged = false; }
-            this._colorTransform.alphaOffset = aOffset;
-            this._colorTransform.redOffset = rOffset;
-            this._colorTransform.greenOffset = gOffset;
-            this._colorTransform.blueOffset = bOffset;
-            this._colorTransform.alphaMultiplier = aMultiplier;
-            this._colorTransform.redMultiplier = rMultiplier;
-            this._colorTransform.greenMultiplier = gMultiplier;
-            this._colorTransform.blueMultiplier = bMultiplier;
-            this._isColorChanged = colorChanged;
-        };
-        p._updateDisplayBlendMode = function (value) {
-            throw new Error("Abstract method needs to be implemented in subclass!");
-        };
-        p._arriveAtFrame = function (frame, timelineState, animationState, isCross) {
-            var displayControl = animationState.displayControl &&
-                animationState.containsBoneMask(this.parent.name);
-            if (displayControl) {
-                var slotFrame = frame;
-                var displayIndex = slotFrame.displayIndex;
-                var childSlot;
-                this._changeDisplay(displayIndex);
-                this._updateDisplayVisible(slotFrame.visible);
-                if (displayIndex >= 0) {
-                    if (!isNaN(slotFrame.zOrder) && slotFrame.zOrder != this._tweenZOrder) {
-                        this._tweenZOrder = slotFrame.zOrder;
-                        this._armature._slotsZOrderChanged = true;
-                    }
-                }
-                if (frame.action) {
-                    if (this.childArmature) {
-                        this.childArmature.animation.gotoAndPlay(frame.action);
-                    }
-                }
-            }
-        };
-        p._updateGlobal = function () {
-            this._calculateRelativeParentTransform();
-            dragonBones.TransformUtil.transformToMatrix(this._global, this._globalTransformMatrix, true);
-            var output = this._calculateParentTransform();
-            if (output) {
-                this._globalTransformMatrix.concat(output.parentGlobalTransformMatrix);
-                dragonBones.TransformUtil.matrixToTransform(this._globalTransformMatrix, this._global, this._global.scaleX * output.parentGlobalTransform.scaleX >= 0, this._global.scaleY * output.parentGlobalTransform.scaleY >= 0);
-            }
-            return output;
-        };
-        p._resetToOrigin = function () {
-            this._changeDisplay(this._originDisplayIndex);
-            this._updateDisplayColor(0, 0, 0, 0, 1, 1, 1, 1, true);
-        };
-        return Slot;
-    })(dragonBones.DBObject);
-    dragonBones.Slot = Slot;
-    egret.registerClass(Slot,'dragonBones.Slot');
-})(dragonBones || (dragonBones = {}));
-var dragonBones;
-(function (dragonBones) {
     var Animation = (function () {
         function Animation(armature) {
             this._animationStateCount = 0;
@@ -3231,6 +1897,1340 @@ var dragonBones;
     })();
     dragonBones.WorldClock = WorldClock;
     egret.registerClass(WorldClock,'dragonBones.WorldClock',["dragonBones.IAnimatable"]);
+})(dragonBones || (dragonBones = {}));
+var dragonBones;
+(function (dragonBones) {
+    var EventDispatcher = (function (_super) {
+        __extends(EventDispatcher, _super);
+        function EventDispatcher(target) {
+            if (target === void 0) { target = null; }
+            _super.call(this, target);
+        }
+        var d = __define,c=EventDispatcher,p=c.prototype;
+        return EventDispatcher;
+    })(egret.EventDispatcher);
+    dragonBones.EventDispatcher = EventDispatcher;
+    egret.registerClass(EventDispatcher,'dragonBones.EventDispatcher');
+})(dragonBones || (dragonBones = {}));
+var dragonBones;
+(function (dragonBones) {
+    var SoundEventManager = (function (_super) {
+        __extends(SoundEventManager, _super);
+        function SoundEventManager() {
+            _super.call(this);
+            if (SoundEventManager._instance) {
+                throw new Error("Singleton already constructed!");
+            }
+        }
+        var d = __define,c=SoundEventManager,p=c.prototype;
+        SoundEventManager.getInstance = function () {
+            if (!SoundEventManager._instance) {
+                SoundEventManager._instance = new SoundEventManager();
+            }
+            return SoundEventManager._instance;
+        };
+        return SoundEventManager;
+    })(dragonBones.EventDispatcher);
+    dragonBones.SoundEventManager = SoundEventManager;
+    egret.registerClass(SoundEventManager,'dragonBones.SoundEventManager');
+})(dragonBones || (dragonBones = {}));
+var dragonBones;
+(function (dragonBones) {
+    var Armature = (function (_super) {
+        __extends(Armature, _super);
+        function Armature(display) {
+            _super.call(this);
+            this._display = display;
+            this._animation = new dragonBones.Animation(this);
+            this._slotsZOrderChanged = false;
+            this._slotList = [];
+            this._boneList = [];
+            this._eventList = [];
+            this._delayDispose = false;
+            this._lockDispose = false;
+            this._armatureData = null;
+        }
+        var d = __define,c=Armature,p=c.prototype;
+        d(p, "armatureData"
+            ,function () {
+                return this._armatureData;
+            }
+        );
+        d(p, "display"
+            ,function () {
+                return this._display;
+            }
+        );
+        p.getDisplay = function () {
+            return this._display;
+        };
+        d(p, "animation"
+            ,function () {
+                return this._animation;
+            }
+        );
+        p.dispose = function () {
+            this._delayDispose = true;
+            if (!this._animation || this._lockDispose) {
+                return;
+            }
+            this.userData = null;
+            this._animation.dispose();
+            var i = this._slotList.length;
+            while (i--) {
+                this._slotList[i].dispose();
+            }
+            i = this._boneList.length;
+            while (i--) {
+                this._boneList[i].dispose();
+            }
+            this._armatureData = null;
+            this._animation = null;
+            this._slotList = null;
+            this._boneList = null;
+            this._eventList = null;
+        };
+        p.invalidUpdate = function (boneName) {
+            if (boneName === void 0) { boneName = null; }
+            if (boneName) {
+                var bone = this.getBone(boneName);
+                if (bone) {
+                    bone.invalidUpdate();
+                }
+            }
+            else {
+                var i = this._boneList.length;
+                while (i--) {
+                    this._boneList[i].invalidUpdate();
+                }
+            }
+        };
+        p.advanceTime = function (passedTime) {
+            this._lockDispose = true;
+            this._animation._advanceTime(passedTime);
+            passedTime *= this._animation.timeScale;
+            var isFading = this._animation._isFading;
+            var i = this._boneList.length;
+            while (i--) {
+                var bone = this._boneList[i];
+                bone._update(isFading);
+            }
+            i = this._slotList.length;
+            while (i--) {
+                var slot = this._slotList[i];
+                slot._update();
+                if (slot._isShowDisplay) {
+                    var childArmature = slot.childArmature;
+                    if (childArmature) {
+                        childArmature.advanceTime(passedTime);
+                    }
+                }
+            }
+            if (this._slotsZOrderChanged) {
+                this.updateSlotsZOrder();
+                if (this.hasEventListener(dragonBones.ArmatureEvent.Z_ORDER_UPDATED)) {
+                    this.dispatchEvent(new dragonBones.ArmatureEvent(dragonBones.ArmatureEvent.Z_ORDER_UPDATED));
+                }
+            }
+            if (this._eventList.length > 0) {
+                for (var i = 0, len = this._eventList.length; i < len; i++) {
+                    var event = this._eventList[i];
+                    this.dispatchEvent(event);
+                }
+                this._eventList.length = 0;
+            }
+            this._lockDispose = false;
+            if (this._delayDispose) {
+                this.dispose();
+            }
+        };
+        p.resetAnimation = function () {
+            this.animation.stop();
+            this.animation._resetAnimationStateList();
+            for (var i = 0, len = this._boneList.length; i < len; i++) {
+                this._boneList[i]._removeAllStates();
+            }
+        };
+        p.getSlots = function (returnCopy) {
+            if (returnCopy === void 0) { returnCopy = true; }
+            return returnCopy ? this._slotList.concat() : this._slotList;
+        };
+        p.getSlot = function (slotName) {
+            var length = this._slotList.length;
+            for (var i = 0; i < length; i++) {
+                var slot = this._slotList[i];
+                if (slot.name == slotName) {
+                    return slot;
+                }
+            }
+            return null;
+        };
+        p.getSlotByDisplay = function (displayObj) {
+            if (displayObj) {
+                var length = this._slotList.length;
+                for (var i = 0; i < length; i++) {
+                    var slot = this._slotList[i];
+                    if (slot.display == displayObj) {
+                        return slot;
+                    }
+                }
+            }
+            return null;
+        };
+        p.addSlot = function (slot, boneName) {
+            var bone = this.getBone(boneName);
+            if (bone) {
+                bone.addSlot(slot);
+            }
+            else {
+                throw new Error();
+            }
+        };
+        p.removeSlot = function (slot) {
+            if (!slot || slot.armature != this) {
+                throw new Error();
+            }
+            slot.parent.removeSlot(slot);
+        };
+        p.removeSlotByName = function (slotName) {
+            var slot = this.getSlot(slotName);
+            if (slot) {
+                this.removeSlot(slot);
+            }
+            return slot;
+        };
+        p.getBones = function (returnCopy) {
+            if (returnCopy === void 0) { returnCopy = true; }
+            return returnCopy ? this._boneList.concat() : this._boneList;
+        };
+        p.getBone = function (boneName) {
+            var length = this._boneList.length;
+            for (var i = 0; i < length; i++) {
+                var bone = this._boneList[i];
+                if (bone.name == boneName) {
+                    return bone;
+                }
+            }
+            return null;
+        };
+        p.getBoneByDisplay = function (display) {
+            var slot = this.getSlotByDisplay(display);
+            return slot ? slot.parent : null;
+        };
+        p.addBone = function (bone, parentName, updateLater) {
+            if (parentName === void 0) { parentName = null; }
+            if (updateLater === void 0) { updateLater = false; }
+            var parentBone;
+            if (parentName) {
+                parentBone = this.getBone(parentName);
+                if (!parentBone) {
+                    throw new Error();
+                }
+            }
+            if (parentBone) {
+                parentBone.addChildBone(bone, updateLater);
+            }
+            else {
+                if (bone.parent) {
+                    bone.parent.removeChildBone(bone, updateLater);
+                }
+                bone._setArmature(this);
+                if (!updateLater) {
+                    this._updateAnimationAfterBoneListChanged();
+                }
+            }
+        };
+        p.removeBone = function (bone, updateLater) {
+            if (updateLater === void 0) { updateLater = false; }
+            if (!bone || bone.armature != this) {
+                throw new Error();
+            }
+            if (bone.parent) {
+                bone.parent.removeChildBone(bone, updateLater);
+            }
+            else {
+                bone._setArmature(null);
+                if (!updateLater) {
+                    this._updateAnimationAfterBoneListChanged(false);
+                }
+            }
+        };
+        p.removeBoneByName = function (boneName) {
+            var bone = this.getBone(boneName);
+            if (bone) {
+                this.removeBone(bone);
+            }
+            return bone;
+        };
+        p._addBoneToBoneList = function (bone) {
+            if (this._boneList.indexOf(bone) < 0) {
+                this._boneList[this._boneList.length] = bone;
+            }
+        };
+        p._removeBoneFromBoneList = function (bone) {
+            var index = this._boneList.indexOf(bone);
+            if (index >= 0) {
+                this._boneList.splice(index, 1);
+            }
+        };
+        p._addSlotToSlotList = function (slot) {
+            if (this._slotList.indexOf(slot) < 0) {
+                this._slotList[this._slotList.length] = slot;
+            }
+        };
+        p._removeSlotFromSlotList = function (slot) {
+            var index = this._slotList.indexOf(slot);
+            if (index >= 0) {
+                this._slotList.splice(index, 1);
+            }
+        };
+        p.updateSlotsZOrder = function () {
+            this._slotList.sort(this.sortSlot);
+            var i = this._slotList.length;
+            while (i--) {
+                var slot = this._slotList[i];
+                if (slot._isShowDisplay) {
+                    slot._addDisplayToContainer(this._display);
+                }
+            }
+            this._slotsZOrderChanged = false;
+        };
+        p._updateAnimationAfterBoneListChanged = function (ifNeedSortBoneList) {
+            if (ifNeedSortBoneList === void 0) { ifNeedSortBoneList = true; }
+            if (ifNeedSortBoneList) {
+                this.sortBoneList();
+            }
+            this._animation._updateAnimationStates();
+        };
+        p.sortBoneList = function () {
+            var i = this._boneList.length;
+            if (i == 0) {
+                return;
+            }
+            var helpArray = [];
+            while (i--) {
+                var level = 0;
+                var bone = this._boneList[i];
+                var boneParent = bone;
+                while (boneParent) {
+                    level++;
+                    boneParent = boneParent.parent;
+                }
+                helpArray[i] = [level, bone];
+            }
+            helpArray.sort(dragonBones.ArmatureData.sortBoneDataHelpArrayDescending);
+            i = helpArray.length;
+            while (i--) {
+                this._boneList[i] = helpArray[i][1];
+            }
+            helpArray.length = 0;
+        };
+        p._arriveAtFrame = function (frame, timelineState, animationState, isCross) {
+            if (frame.event && this.hasEventListener(dragonBones.FrameEvent.ANIMATION_FRAME_EVENT)) {
+                var frameEvent = new dragonBones.FrameEvent(dragonBones.FrameEvent.ANIMATION_FRAME_EVENT);
+                frameEvent.animationState = animationState;
+                frameEvent.frameLabel = frame.event;
+                this._eventList.push(frameEvent);
+            }
+            if (frame.sound && Armature._soundManager.hasEventListener(dragonBones.SoundEvent.SOUND)) {
+                var soundEvent = new dragonBones.SoundEvent(dragonBones.SoundEvent.SOUND);
+                soundEvent.armature = this;
+                soundEvent.animationState = animationState;
+                soundEvent.sound = frame.sound;
+                Armature._soundManager.dispatchEvent(soundEvent);
+            }
+            if (frame.action) {
+                if (animationState.displayControl) {
+                    this.animation.gotoAndPlay(frame.action);
+                }
+            }
+        };
+        p.sortSlot = function (slot1, slot2) {
+            return slot1.zOrder < slot2.zOrder ? 1 : -1;
+        };
+        p.getAnimation = function () {
+            return this._animation;
+        };
+        Armature._soundManager = dragonBones.SoundEventManager.getInstance();
+        return Armature;
+    })(dragonBones.EventDispatcher);
+    dragonBones.Armature = Armature;
+    egret.registerClass(Armature,'dragonBones.Armature',["dragonBones.IAnimatable"]);
+})(dragonBones || (dragonBones = {}));
+var dragonBones;
+(function (dragonBones) {
+    var Matrix = (function () {
+        function Matrix() {
+            this.a = 1;
+            this.b = 0;
+            this.c = 0;
+            this.d = 1;
+            this.tx = 0;
+            this.ty = 0;
+        }
+        var d = __define,c=Matrix,p=c.prototype;
+        p.invert = function () {
+            var a1 = this.a;
+            var b1 = this.b;
+            var c1 = this.c;
+            var d1 = this.d;
+            var tx1 = this.tx;
+            var n = a1 * d1 - b1 * c1;
+            this.a = d1 / n;
+            this.b = -b1 / n;
+            this.c = -c1 / n;
+            this.d = a1 / n;
+            this.tx = (c1 * this.ty - d1 * tx1) / n;
+            this.ty = -(a1 * this.ty - b1 * tx1) / n;
+        };
+        p.concat = function (m) {
+            var ma = m.a;
+            var mb = m.b;
+            var mc = m.c;
+            var md = m.d;
+            var tx1 = this.tx;
+            var ty1 = this.ty;
+            if (ma != 1 || mb != 0 || mc != 0 || md != 1) {
+                var a1 = this.a;
+                var b1 = this.b;
+                var c1 = this.c;
+                var d1 = this.d;
+                this.a = a1 * ma + b1 * mc;
+                this.b = a1 * mb + b1 * md;
+                this.c = c1 * ma + d1 * mc;
+                this.d = c1 * mb + d1 * md;
+            }
+            this.tx = tx1 * ma + ty1 * mc + m.tx;
+            this.ty = tx1 * mb + ty1 * md + m.ty;
+        };
+        p.copyFrom = function (m) {
+            this.tx = m.tx;
+            this.ty = m.ty;
+            this.a = m.a;
+            this.b = m.b;
+            this.c = m.c;
+            this.d = m.d;
+        };
+        return Matrix;
+    })();
+    dragonBones.Matrix = Matrix;
+    egret.registerClass(Matrix,'dragonBones.Matrix');
+})(dragonBones || (dragonBones = {}));
+var dragonBones;
+(function (dragonBones) {
+    var DBTransform = (function () {
+        function DBTransform() {
+            this.x = 0;
+            this.y = 0;
+            this.skewX = 0;
+            this.skewY = 0;
+            this.scaleX = 1;
+            this.scaleY = 1;
+        }
+        var d = __define,c=DBTransform,p=c.prototype;
+        d(p, "rotation"
+            ,function () {
+                return this.skewX;
+            }
+            ,function (value) {
+                this.skewX = this.skewY = value;
+            }
+        );
+        p.copy = function (transform) {
+            this.x = transform.x;
+            this.y = transform.y;
+            this.skewX = transform.skewX;
+            this.skewY = transform.skewY;
+            this.scaleX = transform.scaleX;
+            this.scaleY = transform.scaleY;
+        };
+        p.add = function (transform) {
+            this.x += transform.x;
+            this.y += transform.y;
+            this.skewX += transform.skewX;
+            this.skewY += transform.skewY;
+            this.scaleX *= transform.scaleX;
+            this.scaleY *= transform.scaleY;
+        };
+        p.minus = function (transform) {
+            this.x -= transform.x;
+            this.y -= transform.y;
+            this.skewX -= transform.skewX;
+            this.skewY -= transform.skewY;
+            this.scaleX /= transform.scaleX;
+            this.scaleY /= transform.scaleY;
+        };
+        p.normalizeRotation = function () {
+            this.skewX = dragonBones.TransformUtil.normalizeRotation(this.skewX);
+            this.skewY = dragonBones.TransformUtil.normalizeRotation(this.skewY);
+        };
+        p.toString = function () {
+            var string = "x:" + this.x + " y:" + this.y + " skewX:" + this.skewX + " skewY:" + this.skewY + " scaleX:" + this.scaleX + " scaleY:" + this.scaleY;
+            return string;
+        };
+        return DBTransform;
+    })();
+    dragonBones.DBTransform = DBTransform;
+    egret.registerClass(DBTransform,'dragonBones.DBTransform');
+})(dragonBones || (dragonBones = {}));
+var dragonBones;
+(function (dragonBones) {
+    var DBObject = (function () {
+        function DBObject() {
+            this._globalTransformMatrix = new dragonBones.Matrix();
+            this._global = new dragonBones.DBTransform();
+            this._origin = new dragonBones.DBTransform();
+            this._offset = new dragonBones.DBTransform();
+            this._offset.scaleX = this._offset.scaleY = 1;
+            this._visible = true;
+            this._armature = null;
+            this._parent = null;
+            this.userData = null;
+            this.inheritRotation = true;
+            this.inheritScale = true;
+            this.inheritTranslation = true;
+        }
+        var d = __define,c=DBObject,p=c.prototype;
+        d(p, "global"
+            ,function () {
+                return this._global;
+            }
+        );
+        d(p, "origin"
+            ,function () {
+                return this._origin;
+            }
+        );
+        d(p, "offset"
+            ,function () {
+                return this._offset;
+            }
+        );
+        d(p, "armature"
+            ,function () {
+                return this._armature;
+            }
+        );
+        p._setArmature = function (value) {
+            this._armature = value;
+        };
+        d(p, "parent"
+            ,function () {
+                return this._parent;
+            }
+        );
+        p._setParent = function (value) {
+            this._parent = value;
+        };
+        p.dispose = function () {
+            this.userData = null;
+            this._globalTransformMatrix = null;
+            this._global = null;
+            this._origin = null;
+            this._offset = null;
+            this._armature = null;
+            this._parent = null;
+        };
+        p._calculateRelativeParentTransform = function () {
+        };
+        p._calculateParentTransform = function () {
+            if (this.parent && (this.inheritTranslation || this.inheritRotation || this.inheritScale)) {
+                var parentGlobalTransform = this._parent._globalTransformForChild;
+                var parentGlobalTransformMatrix = this._parent._globalTransformMatrixForChild;
+                if (!this.inheritTranslation || !this.inheritRotation || !this.inheritScale) {
+                    parentGlobalTransform = DBObject._tempParentGlobalTransform;
+                    parentGlobalTransform.copy(this._parent._globalTransformForChild);
+                    if (!this.inheritTranslation) {
+                        parentGlobalTransform.x = 0;
+                        parentGlobalTransform.y = 0;
+                    }
+                    if (!this.inheritScale) {
+                        parentGlobalTransform.scaleX = 1;
+                        parentGlobalTransform.scaleY = 1;
+                    }
+                    if (!this.inheritRotation) {
+                        parentGlobalTransform.skewX = 0;
+                        parentGlobalTransform.skewY = 0;
+                    }
+                    parentGlobalTransformMatrix = DBObject._tempParentGlobalTransformMatrix;
+                    dragonBones.TransformUtil.transformToMatrix(parentGlobalTransform, parentGlobalTransformMatrix, true);
+                }
+                return { parentGlobalTransform: parentGlobalTransform, parentGlobalTransformMatrix: parentGlobalTransformMatrix };
+            }
+            return null;
+        };
+        p._updateGlobal = function () {
+            this._calculateRelativeParentTransform();
+            var output = this._calculateParentTransform();
+            if (output != null) {
+                var parentMatrix = output.parentGlobalTransformMatrix;
+                var parentGlobalTransform = output.parentGlobalTransform;
+                var x = this._global.x;
+                var y = this._global.y;
+                this._global.x = parentMatrix.a * x + parentMatrix.c * y + parentMatrix.tx;
+                this._global.y = parentMatrix.d * y + parentMatrix.b * x + parentMatrix.ty;
+                if (this.inheritRotation) {
+                    this._global.skewX += parentGlobalTransform.skewX;
+                    this._global.skewY += parentGlobalTransform.skewY;
+                }
+                if (this.inheritScale) {
+                    this._global.scaleX *= parentGlobalTransform.scaleX;
+                    this._global.scaleY *= parentGlobalTransform.scaleY;
+                }
+            }
+            dragonBones.TransformUtil.transformToMatrix(this._global, this._globalTransformMatrix, true);
+            return output;
+        };
+        DBObject._tempParentGlobalTransformMatrix = new dragonBones.Matrix();
+        DBObject._tempParentGlobalTransform = new dragonBones.DBTransform();
+        return DBObject;
+    })();
+    dragonBones.DBObject = DBObject;
+    egret.registerClass(DBObject,'dragonBones.DBObject');
+})(dragonBones || (dragonBones = {}));
+var dragonBones;
+(function (dragonBones) {
+    var Bone = (function (_super) {
+        __extends(Bone, _super);
+        function Bone() {
+            _super.call(this);
+            this.applyOffsetTranslationToChild = true;
+            this.applyOffsetRotationToChild = true;
+            this.applyOffsetScaleToChild = false;
+            this._needUpdate = 0;
+            this._tween = new dragonBones.DBTransform();
+            this._tweenPivot = new dragonBones.Point();
+            this._tween.scaleX = this._tween.scaleY = 1;
+            this._boneList = [];
+            this._slotList = [];
+            this._timelineStateList = [];
+            this._needUpdate = 2;
+            this._isColorChanged = false;
+        }
+        var d = __define,c=Bone,p=c.prototype;
+        Bone.initWithBoneData = function (boneData) {
+            var outputBone = new Bone();
+            outputBone.name = boneData.name;
+            outputBone.inheritRotation = boneData.inheritRotation;
+            outputBone.inheritScale = boneData.inheritScale;
+            outputBone.origin.copy(boneData.transform);
+            return outputBone;
+        };
+        p.dispose = function () {
+            if (!this._boneList) {
+                return;
+            }
+            _super.prototype.dispose.call(this);
+            var i = this._boneList.length;
+            while (i--) {
+                this._boneList[i].dispose();
+            }
+            i = this._slotList.length;
+            while (i--) {
+                this._slotList[i].dispose();
+            }
+            this._tween = null;
+            this._tweenPivot = null;
+            this._boneList = null;
+            this._slotList = null;
+            this._timelineStateList = null;
+        };
+        p.contains = function (child) {
+            if (!child) {
+                throw new Error();
+            }
+            if (child == this) {
+                return false;
+            }
+            var ancestor = child;
+            while (!(ancestor == this || ancestor == null)) {
+                ancestor = ancestor.parent;
+            }
+            return ancestor == this;
+        };
+        p.addChildBone = function (childBone, updateLater) {
+            if (updateLater === void 0) { updateLater = false; }
+            if (!childBone) {
+                throw new Error();
+            }
+            if (childBone == this || childBone.contains(this)) {
+                throw new Error();
+            }
+            if (childBone.parent == this) {
+                return;
+            }
+            if (childBone.parent) {
+                childBone.parent.removeChildBone(childBone, updateLater);
+            }
+            this._boneList[this._boneList.length] = childBone;
+            childBone._setParent(this);
+            childBone._setArmature(this._armature);
+            if (this._armature && !updateLater) {
+                this._armature._updateAnimationAfterBoneListChanged();
+            }
+        };
+        p.removeChildBone = function (childBone, updateLater) {
+            if (updateLater === void 0) { updateLater = false; }
+            if (!childBone) {
+                throw new Error();
+            }
+            var index = this._boneList.indexOf(childBone);
+            if (index < 0) {
+                throw new Error();
+            }
+            this._boneList.splice(index, 1);
+            childBone._setParent(null);
+            childBone._setArmature(null);
+            if (this._armature && !updateLater) {
+                this._armature._updateAnimationAfterBoneListChanged(false);
+            }
+        };
+        p.addSlot = function (childSlot) {
+            if (!childSlot) {
+                throw new Error();
+            }
+            if (childSlot.parent) {
+                childSlot.parent.removeSlot(childSlot);
+            }
+            this._slotList[this._slotList.length] = childSlot;
+            childSlot._setParent(this);
+            childSlot.setArmature(this._armature);
+        };
+        p.removeSlot = function (childSlot) {
+            if (!childSlot) {
+                throw new Error();
+            }
+            var index = this._slotList.indexOf(childSlot);
+            if (index < 0) {
+                throw new Error();
+            }
+            this._slotList.splice(index, 1);
+            childSlot._setParent(null);
+            childSlot.setArmature(null);
+        };
+        p._setArmature = function (value) {
+            if (this._armature == value) {
+                return;
+            }
+            if (this._armature) {
+                this._armature._removeBoneFromBoneList(this);
+                this._armature._updateAnimationAfterBoneListChanged(false);
+            }
+            this._armature = value;
+            if (this._armature) {
+                this._armature._addBoneToBoneList(this);
+            }
+            var i = this._boneList.length;
+            while (i--) {
+                this._boneList[i]._setArmature(this._armature);
+            }
+            i = this._slotList.length;
+            while (i--) {
+                this._slotList[i].setArmature(this._armature);
+            }
+        };
+        p.getBones = function (returnCopy) {
+            if (returnCopy === void 0) { returnCopy = true; }
+            return returnCopy ? this._boneList.concat() : this._boneList;
+        };
+        p.getSlots = function (returnCopy) {
+            if (returnCopy === void 0) { returnCopy = true; }
+            return returnCopy ? this._slotList.concat() : this._slotList;
+        };
+        p.invalidUpdate = function () {
+            this._needUpdate = 2;
+        };
+        p._calculateRelativeParentTransform = function () {
+            this._global.scaleX = this._origin.scaleX * this._tween.scaleX * this._offset.scaleX;
+            this._global.scaleY = this._origin.scaleY * this._tween.scaleY * this._offset.scaleY;
+            this._global.skewX = this._origin.skewX + this._tween.skewX + this._offset.skewX;
+            this._global.skewY = this._origin.skewY + this._tween.skewY + this._offset.skewY;
+            this._global.x = this._origin.x + this._tween.x + this._offset.x;
+            this._global.y = this._origin.y + this._tween.y + this._offset.y;
+        };
+        p._update = function (needUpdate) {
+            if (needUpdate === void 0) { needUpdate = false; }
+            this._needUpdate--;
+            if (needUpdate || this._needUpdate > 0 || (this._parent && this._parent._needUpdate > 0)) {
+                this._needUpdate = 1;
+            }
+            else {
+                return;
+            }
+            this.blendingTimeline();
+            var result = this._updateGlobal();
+            var parentGlobalTransform = result ? result.parentGlobalTransform : null;
+            var parentGlobalTransformMatrix = result ? result.parentGlobalTransformMatrix : null;
+            var ifExistOffsetTranslation = this._offset.x != 0 || this._offset.y != 0;
+            var ifExistOffsetScale = this._offset.scaleX != 0 || this._offset.scaleY != 0;
+            var ifExistOffsetRotation = this._offset.skewX != 0 || this._offset.skewY != 0;
+            if ((!ifExistOffsetTranslation || this.applyOffsetTranslationToChild) &&
+                (!ifExistOffsetScale || this.applyOffsetScaleToChild) &&
+                (!ifExistOffsetRotation || this.applyOffsetRotationToChild)) {
+                this._globalTransformForChild = this._global;
+                this._globalTransformMatrixForChild = this._globalTransformMatrix;
+            }
+            else {
+                if (!this._tempGlobalTransformForChild) {
+                    this._tempGlobalTransformForChild = new dragonBones.DBTransform();
+                }
+                this._globalTransformForChild = this._tempGlobalTransformForChild;
+                if (!this._tempGlobalTransformMatrixForChild) {
+                    this._tempGlobalTransformMatrixForChild = new dragonBones.Matrix();
+                }
+                this._globalTransformMatrixForChild = this._tempGlobalTransformMatrixForChild;
+                this._globalTransformForChild.x = this._origin.x + this._tween.x;
+                this._globalTransformForChild.y = this._origin.y + this._tween.y;
+                this._globalTransformForChild.scaleX = this._origin.scaleX * this._tween.scaleX;
+                this._globalTransformForChild.scaleY = this._origin.scaleY * this._tween.scaleY;
+                this._globalTransformForChild.skewX = this._origin.skewX + this._tween.skewX;
+                this._globalTransformForChild.skewY = this._origin.skewY + this._tween.skewY;
+                if (this.applyOffsetTranslationToChild) {
+                    this._globalTransformForChild.x += this._offset.x;
+                    this._globalTransformForChild.y += this._offset.y;
+                }
+                if (this.applyOffsetScaleToChild) {
+                    this._globalTransformForChild.scaleX *= this._offset.scaleX;
+                    this._globalTransformForChild.scaleY *= this._offset.scaleY;
+                }
+                if (this.applyOffsetRotationToChild) {
+                    this._globalTransformForChild.skewX += this._offset.skewX;
+                    this._globalTransformForChild.skewY += this._offset.skewY;
+                }
+                dragonBones.TransformUtil.transformToMatrix(this._globalTransformForChild, this._globalTransformMatrixForChild, true);
+                if (parentGlobalTransformMatrix) {
+                    this._globalTransformMatrixForChild.concat(parentGlobalTransformMatrix);
+                    dragonBones.TransformUtil.matrixToTransform(this._globalTransformMatrixForChild, this._globalTransformForChild, this._globalTransformForChild.scaleX * parentGlobalTransform.scaleX >= 0, this._globalTransformForChild.scaleY * parentGlobalTransform.scaleY >= 0);
+                }
+            }
+        };
+        p._updateColor = function (aOffset, rOffset, gOffset, bOffset, aMultiplier, rMultiplier, gMultiplier, bMultiplier, colorChanged) {
+            var length = this._slotList.length;
+            for (var i = 0; i < length; i++) {
+                var childSlot = this._slotList[i];
+                childSlot._updateDisplayColor(aOffset, rOffset, gOffset, bOffset, aMultiplier, rMultiplier, gMultiplier, bMultiplier);
+            }
+            this._isColorChanged = colorChanged;
+        };
+        p._hideSlots = function () {
+            var length = this._slotList.length;
+            for (var i = 0; i < length; i++) {
+                var childSlot = this._slotList[i];
+                childSlot._changeDisplay(-1);
+            }
+        };
+        p._arriveAtFrame = function (frame, timelineState, animationState, isCross) {
+            var displayControl = animationState.displayControl &&
+                (!this.displayController || this.displayController == animationState.name) &&
+                animationState.containsBoneMask(this.name);
+            if (displayControl) {
+                var tansformFrame = frame;
+                var displayIndex = tansformFrame.displayIndex;
+                var childSlot;
+                if (frame.event && this._armature.hasEventListener(dragonBones.FrameEvent.BONE_FRAME_EVENT)) {
+                    var frameEvent = new dragonBones.FrameEvent(dragonBones.FrameEvent.BONE_FRAME_EVENT);
+                    frameEvent.bone = this;
+                    frameEvent.animationState = animationState;
+                    frameEvent.frameLabel = frame.event;
+                    this._armature._eventList.push(frameEvent);
+                }
+                if (frame.sound && Bone._soundManager.hasEventListener(dragonBones.SoundEvent.SOUND)) {
+                    var soundEvent = new dragonBones.SoundEvent(dragonBones.SoundEvent.SOUND);
+                    soundEvent.armature = this._armature;
+                    soundEvent.animationState = animationState;
+                    soundEvent.sound = frame.sound;
+                    Bone._soundManager.dispatchEvent(soundEvent);
+                }
+                if (frame.action) {
+                    var length1 = this._slotList.length;
+                    for (var i1 = 0; i1 < length1; i1++) {
+                        childSlot = this._slotList[i1];
+                        var childArmature = childSlot.childArmature;
+                        if (childArmature) {
+                            childArmature.animation.gotoAndPlay(frame.action);
+                        }
+                    }
+                }
+            }
+        };
+        p._addState = function (timelineState) {
+            if (this._timelineStateList.indexOf(timelineState) < 0) {
+                this._timelineStateList.push(timelineState);
+                this._timelineStateList.sort(this.sortState);
+            }
+        };
+        p._removeState = function (timelineState) {
+            var index = this._timelineStateList.indexOf(timelineState);
+            if (index >= 0) {
+                this._timelineStateList.splice(index, 1);
+            }
+        };
+        p._removeAllStates = function () {
+            this._timelineStateList.length = 0;
+        };
+        p.blendingTimeline = function () {
+            var timelineState;
+            var transform;
+            var pivot;
+            var weight;
+            var i = this._timelineStateList.length;
+            if (i == 1) {
+                timelineState = this._timelineStateList[0];
+                weight = timelineState._animationState.weight * timelineState._animationState.fadeWeight;
+                timelineState._weight = weight;
+                transform = timelineState._transform;
+                pivot = timelineState._pivot;
+                this._tween.x = transform.x * weight;
+                this._tween.y = transform.y * weight;
+                this._tween.skewX = transform.skewX * weight;
+                this._tween.skewY = transform.skewY * weight;
+                this._tween.scaleX = 1 + (transform.scaleX - 1) * weight;
+                this._tween.scaleY = 1 + (transform.scaleY - 1) * weight;
+                this._tweenPivot.x = pivot.x * weight;
+                this._tweenPivot.y = pivot.y * weight;
+            }
+            else if (i > 1) {
+                var x = 0;
+                var y = 0;
+                var skewX = 0;
+                var skewY = 0;
+                var scaleX = 1;
+                var scaleY = 1;
+                var pivotX = 0;
+                var pivotY = 0;
+                var weigthLeft = 1;
+                var layerTotalWeight = 0;
+                var prevLayer = this._timelineStateList[i - 1]._animationState.layer;
+                var currentLayer = 0;
+                while (i--) {
+                    timelineState = this._timelineStateList[i];
+                    currentLayer = timelineState._animationState.layer;
+                    if (prevLayer != currentLayer) {
+                        if (layerTotalWeight >= weigthLeft) {
+                            timelineState._weight = 0;
+                            break;
+                        }
+                        else {
+                            weigthLeft -= layerTotalWeight;
+                        }
+                    }
+                    prevLayer = currentLayer;
+                    weight = timelineState._animationState.weight * timelineState._animationState.fadeWeight * weigthLeft;
+                    timelineState._weight = weight;
+                    if (weight) {
+                        transform = timelineState._transform;
+                        pivot = timelineState._pivot;
+                        x += transform.x * weight;
+                        y += transform.y * weight;
+                        skewX += transform.skewX * weight;
+                        skewY += transform.skewY * weight;
+                        scaleX += (transform.scaleX - 1) * weight;
+                        scaleY += (transform.scaleY - 1) * weight;
+                        pivotX += pivot.x * weight;
+                        pivotY += pivot.y * weight;
+                        layerTotalWeight += weight;
+                    }
+                }
+                this._tween.x = x;
+                this._tween.y = y;
+                this._tween.skewX = skewX;
+                this._tween.skewY = skewY;
+                this._tween.scaleX = scaleX;
+                this._tween.scaleY = scaleY;
+                this._tweenPivot.x = pivotX;
+                this._tweenPivot.y = pivotY;
+            }
+        };
+        p.sortState = function (state1, state2) {
+            return state1._animationState.layer < state2._animationState.layer ? -1 : 1;
+        };
+        d(p, "childArmature"
+            ,function () {
+                if (this.slot) {
+                    return this.slot.childArmature;
+                }
+                return null;
+            }
+        );
+        d(p, "display"
+            ,function () {
+                if (this.slot) {
+                    return this.slot.display;
+                }
+                return null;
+            }
+            ,function (value) {
+                if (this.slot) {
+                    this.slot.display = value;
+                }
+            }
+        );
+        d(p, "node"
+            ,function () {
+                return this._offset;
+            }
+        );
+        d(p, "visible",undefined
+            ,function (value) {
+                if (this._visible != value) {
+                    this._visible = value;
+                    var length = this._slotList.length;
+                    for (var i = 0; i < length; i++) {
+                        var childSlot = this._slotList[i];
+                        childSlot._updateDisplayVisible(this._visible);
+                    }
+                }
+            }
+        );
+        d(p, "slot"
+            ,function () {
+                return this._slotList.length > 0 ? this._slotList[0] : null;
+            }
+        );
+        Bone._soundManager = dragonBones.SoundEventManager.getInstance();
+        return Bone;
+    })(dragonBones.DBObject);
+    dragonBones.Bone = Bone;
+    egret.registerClass(Bone,'dragonBones.Bone');
+})(dragonBones || (dragonBones = {}));
+var dragonBones;
+(function (dragonBones) {
+    var Slot = (function (_super) {
+        __extends(Slot, _super);
+        function Slot(self) {
+            _super.call(this);
+            this._currentDisplayIndex = 0;
+            if (self != this) {
+                throw new Error(egret.getString(4001));
+            }
+            this._displayList = [];
+            this._timelineStateList = [];
+            this._currentDisplayIndex = -1;
+            this._originZOrder = 0;
+            this._tweenZOrder = 0;
+            this._offsetZOrder = 0;
+            this._isShowDisplay = false;
+            this._colorTransform = new dragonBones.ColorTransform();
+            this._displayDataList = null;
+            this._currentDisplay = null;
+            this.inheritRotation = true;
+            this.inheritScale = true;
+        }
+        var d = __define,c=Slot,p=c.prototype;
+        p.initWithSlotData = function (slotData) {
+            this.name = slotData.name;
+            this.blendMode = slotData.blendMode;
+            this._originZOrder = slotData.zOrder;
+            this._displayDataList = slotData.displayDataList;
+            this._originDisplayIndex = slotData.displayIndex;
+        };
+        p.dispose = function () {
+            if (!this._displayList) {
+                return;
+            }
+            _super.prototype.dispose.call(this);
+            this._displayList.length = 0;
+            this._displayDataList = null;
+            this._displayList = null;
+            this._currentDisplay = null;
+        };
+        p.sortState = function (state1, state2) {
+            return state1._animationState.layer < state2._animationState.layer ? -1 : 1;
+        };
+        p._addState = function (timelineState) {
+            if (this._timelineStateList.indexOf(timelineState) < 0) {
+                this._timelineStateList.push(timelineState);
+                this._timelineStateList.sort(this.sortState);
+            }
+        };
+        p._removeState = function (timelineState) {
+            var index = this._timelineStateList.indexOf(timelineState);
+            if (index >= 0) {
+                this._timelineStateList.splice(index, 1);
+            }
+        };
+        p.setArmature = function (value) {
+            if (this._armature == value) {
+                return;
+            }
+            if (this._armature) {
+                this._armature._removeSlotFromSlotList(this);
+            }
+            this._armature = value;
+            if (this._armature) {
+                this._armature._addSlotToSlotList(this);
+                this._armature._slotsZOrderChanged = true;
+                this._addDisplayToContainer(this._armature.display);
+            }
+            else {
+                this._removeDisplayFromContainer();
+            }
+        };
+        p._update = function () {
+            if (this._parent._needUpdate <= 0 && !this._needUpdate) {
+                return;
+            }
+            this._updateGlobal();
+            this._updateTransform();
+            this._needUpdate = false;
+        };
+        p._calculateRelativeParentTransform = function () {
+            this._global.scaleX = this._origin.scaleX * this._offset.scaleX;
+            this._global.scaleY = this._origin.scaleY * this._offset.scaleY;
+            this._global.skewX = this._origin.skewX + this._offset.skewX;
+            this._global.skewY = this._origin.skewY + this._offset.skewY;
+            this._global.x = this._origin.x + this._offset.x + this._parent._tweenPivot.x;
+            this._global.y = this._origin.y + this._offset.y + this._parent._tweenPivot.y;
+        };
+        p.updateChildArmatureAnimation = function () {
+            if (this.childArmature) {
+                if (this._isShowDisplay) {
+                    if (this._armature &&
+                        this._armature.animation.lastAnimationState &&
+                        this.childArmature.animation.hasAnimation(this._armature.animation.lastAnimationState.name)) {
+                        this.childArmature.animation.gotoAndPlay(this._armature.animation.lastAnimationState.name);
+                    }
+                    else {
+                        this.childArmature.animation.play();
+                    }
+                }
+                else {
+                    this.childArmature.animation.stop();
+                    this.childArmature.animation._lastAnimationState = null;
+                }
+            }
+        };
+        p._changeDisplay = function (displayIndex) {
+            if (displayIndex === void 0) { displayIndex = 0; }
+            if (displayIndex < 0) {
+                if (this._isShowDisplay) {
+                    this._isShowDisplay = false;
+                    this._removeDisplayFromContainer();
+                    this.updateChildArmatureAnimation();
+                }
+            }
+            else if (this._displayList.length > 0) {
+                var length = this._displayList.length;
+                if (displayIndex >= length) {
+                    displayIndex = length - 1;
+                }
+                if (this._currentDisplayIndex != displayIndex) {
+                    this._isShowDisplay = true;
+                    this._currentDisplayIndex = displayIndex;
+                    this._updateSlotDisplay();
+                    this.updateChildArmatureAnimation();
+                    if (this._displayDataList &&
+                        this._displayDataList.length > 0 &&
+                        this._currentDisplayIndex < this._displayDataList.length) {
+                        this._origin.copy(this._displayDataList[this._currentDisplayIndex].transform);
+                    }
+                    this._needUpdate = true;
+                }
+                else if (!this._isShowDisplay) {
+                    this._isShowDisplay = true;
+                    if (this._armature) {
+                        this._armature._slotsZOrderChanged = true;
+                        this._addDisplayToContainer(this._armature.display);
+                    }
+                    this.updateChildArmatureAnimation();
+                }
+            }
+        };
+        p._updateSlotDisplay = function () {
+            var currentDisplayIndex = -1;
+            if (this._currentDisplay) {
+                currentDisplayIndex = this._getDisplayIndex();
+                this._removeDisplayFromContainer();
+            }
+            var displayObj = this._displayList[this._currentDisplayIndex];
+            if (displayObj) {
+                if (displayObj instanceof dragonBones.Armature) {
+                    this._currentDisplay = displayObj.display;
+                }
+                else {
+                    this._currentDisplay = displayObj;
+                }
+            }
+            else {
+                this._currentDisplay = null;
+            }
+            this._updateDisplay(this._currentDisplay);
+            if (this._currentDisplay) {
+                if (this._armature && this._isShowDisplay) {
+                    if (currentDisplayIndex < 0) {
+                        this._armature._slotsZOrderChanged = true;
+                        this._addDisplayToContainer(this._armature.display);
+                    }
+                    else {
+                        this._addDisplayToContainer(this._armature.display, currentDisplayIndex);
+                    }
+                }
+                this._updateDisplayBlendMode(this._blendMode);
+                this._updateDisplayColor(this._colorTransform.alphaOffset, this._colorTransform.redOffset, this._colorTransform.greenOffset, this._colorTransform.blueOffset, this._colorTransform.alphaMultiplier, this._colorTransform.redMultiplier, this._colorTransform.greenMultiplier, this._colorTransform.blueMultiplier, true);
+                this._updateDisplayVisible(this._visible);
+                this._updateTransform();
+            }
+        };
+        d(p, "visible",undefined
+            ,function (value) {
+                if (this._visible != value) {
+                    this._visible = value;
+                    this._updateDisplayVisible(this._visible);
+                }
+            }
+        );
+        d(p, "displayList"
+            ,function () {
+                return this._displayList;
+            }
+            ,function (value) {
+                if (!value) {
+                    throw new Error();
+                }
+                if (this._currentDisplayIndex < 0) {
+                    this._currentDisplayIndex = 0;
+                }
+                var i = this._displayList.length = value.length;
+                while (i--) {
+                    this._displayList[i] = value[i];
+                }
+                var displayIndexBackup = this._currentDisplayIndex;
+                this._currentDisplayIndex = -1;
+                this._changeDisplay(displayIndexBackup);
+            }
+        );
+        d(p, "display"
+            ,function () {
+                return this._currentDisplay;
+            }
+            ,function (value) {
+                if (this._currentDisplayIndex < 0) {
+                    this._currentDisplayIndex = 0;
+                }
+                if (this._displayList[this._currentDisplayIndex] == value) {
+                    return;
+                }
+                this._displayList[this._currentDisplayIndex] = value;
+                this._updateSlotDisplay();
+                this.updateChildArmatureAnimation();
+                this._updateTransform();
+            }
+        );
+        p.getDisplay = function () {
+            return this.display;
+        };
+        p.setDisplay = function (value) {
+            this.display = value;
+        };
+        d(p, "childArmature"
+            ,function () {
+                if (this._displayList[this._currentDisplayIndex] instanceof dragonBones.Armature) {
+                    return (this._displayList[this._currentDisplayIndex]);
+                }
+                return null;
+            }
+            ,function (value) {
+                this.display = value;
+            }
+        );
+        d(p, "zOrder"
+            ,function () {
+                return this._originZOrder + this._tweenZOrder + this._offsetZOrder;
+            }
+            ,function (value) {
+                if (this.zOrder != value) {
+                    this._offsetZOrder = value - this._originZOrder - this._tweenZOrder;
+                    if (this._armature) {
+                        this._armature._slotsZOrderChanged = true;
+                    }
+                }
+            }
+        );
+        d(p, "blendMode"
+            ,function () {
+                return this._blendMode;
+            }
+            ,function (value) {
+                if (this._blendMode != value) {
+                    this._blendMode = value;
+                    this._updateDisplayBlendMode(this._blendMode);
+                }
+            }
+        );
+        p._updateDisplay = function (value) {
+            throw new Error("");
+        };
+        p._getDisplayIndex = function () {
+            throw new Error(egret.getString(4001));
+        };
+        p._addDisplayToContainer = function (container, index) {
+            if (index === void 0) { index = -1; }
+            throw new Error(egret.getString(4001));
+        };
+        p._removeDisplayFromContainer = function () {
+            throw new Error(egret.getString(4001));
+        };
+        p._updateTransform = function () {
+            throw new Error(egret.getString(4001));
+        };
+        p._updateDisplayVisible = function (value) {
+            throw new Error(egret.getString(4001));
+        };
+        p._updateDisplayColor = function (aOffset, rOffset, gOffset, bOffset, aMultiplier, rMultiplier, gMultiplier, bMultiplier, colorChanged) {
+            if (colorChanged === void 0) { colorChanged = false; }
+            this._colorTransform.alphaOffset = aOffset;
+            this._colorTransform.redOffset = rOffset;
+            this._colorTransform.greenOffset = gOffset;
+            this._colorTransform.blueOffset = bOffset;
+            this._colorTransform.alphaMultiplier = aMultiplier;
+            this._colorTransform.redMultiplier = rMultiplier;
+            this._colorTransform.greenMultiplier = gMultiplier;
+            this._colorTransform.blueMultiplier = bMultiplier;
+            this._isColorChanged = colorChanged;
+        };
+        p._updateDisplayBlendMode = function (value) {
+            throw new Error("Abstract method needs to be implemented in subclass!");
+        };
+        p._arriveAtFrame = function (frame, timelineState, animationState, isCross) {
+            var displayControl = animationState.displayControl &&
+                animationState.containsBoneMask(this.parent.name);
+            if (displayControl) {
+                var slotFrame = frame;
+                var displayIndex = slotFrame.displayIndex;
+                var childSlot;
+                this._changeDisplay(displayIndex);
+                this._updateDisplayVisible(slotFrame.visible);
+                if (displayIndex >= 0) {
+                    if (!isNaN(slotFrame.zOrder) && slotFrame.zOrder != this._tweenZOrder) {
+                        this._tweenZOrder = slotFrame.zOrder;
+                        this._armature._slotsZOrderChanged = true;
+                    }
+                }
+                if (frame.action) {
+                    if (this.childArmature) {
+                        this.childArmature.animation.gotoAndPlay(frame.action);
+                    }
+                }
+            }
+        };
+        p._updateGlobal = function () {
+            this._calculateRelativeParentTransform();
+            dragonBones.TransformUtil.transformToMatrix(this._global, this._globalTransformMatrix, true);
+            var output = this._calculateParentTransform();
+            if (output) {
+                this._globalTransformMatrix.concat(output.parentGlobalTransformMatrix);
+                dragonBones.TransformUtil.matrixToTransform(this._globalTransformMatrix, this._global, this._global.scaleX * output.parentGlobalTransform.scaleX >= 0, this._global.scaleY * output.parentGlobalTransform.scaleY >= 0);
+            }
+            return output;
+        };
+        p._resetToOrigin = function () {
+            this._changeDisplay(this._originDisplayIndex);
+            this._updateDisplayColor(0, 0, 0, 0, 1, 1, 1, 1, true);
+        };
+        return Slot;
+    })(dragonBones.DBObject);
+    dragonBones.Slot = Slot;
+    egret.registerClass(Slot,'dragonBones.Slot');
 })(dragonBones || (dragonBones = {}));
 var dragonBones;
 (function (dragonBones) {
