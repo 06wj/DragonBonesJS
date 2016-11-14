@@ -62,9 +62,9 @@ if (!window.egret) {
                         if (index > -1) {
                             listeners.splice(index, 1);
                         }
-                        if (listenerObj.listener) {
-                            listenerObj.listener.call(listenerObj.thisObject || this, event);
-                        }
+                    }
+                    if (listenerObj.listener) {
+                        listenerObj.listener.call(listenerObj.thisObject || this, event);
                     }
                 }
             }

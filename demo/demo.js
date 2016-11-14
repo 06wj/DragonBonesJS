@@ -41,6 +41,18 @@ var demo = {
         armatureDisplay.x = demo.pos[0];
         armatureDisplay.y = demo.pos[1];
 
+        armature.addEventListener(dragonBones.AnimationEvent.START, function(e){
+            console.log(dragonBones.AnimationEvent.START);
+        }, armature);
+
+        armature.addEventListener(dragonBones.AnimationEvent.COMPLETE, function(e){
+            console.log(dragonBones.AnimationEvent.COMPLETE);
+        }, armature);
+
+        armature.addEventListener(dragonBones.AnimationEvent.LOOP_COMPLETE, function(e){
+            console.log(dragonBones.AnimationEvent.LOOP_COMPLETE);
+        }, armature);
+
         dragonBones.WorldClock.clock.add(armature);
         this.play();
     },
