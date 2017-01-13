@@ -1,4 +1,6 @@
 # DragonBonesJS
+
+[![Join the chat at https://gitter.im/06wjin/DragonBonesJS](https://badges.gitter.im/06wjin/DragonBonesJS.svg)](https://gitter.im/06wjin/DragonBonesJS?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 > DragonBones Library JavaScript Version
 
 ## Info
