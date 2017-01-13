@@ -131,13 +131,7 @@ module dragonBones {
 			
 			var version:string = rawDataToParse[ConstValues.A_VERSION];
             version = version.toString();
-            if( version.toString() != DragonBones.DATA_VERSION &&
-                version.toString() != DragonBones.PARENT_COORDINATE_DATA_VERSION &&
-				version.toString() != "2.3")
-            {
-                throw new Error(egret.getString(4003));
-            }
-			else if(version.toString() == DragonBones.PARENT_COORDINATE_DATA_VERSION||
+            if(version.toString() == DragonBones.PARENT_COORDINATE_DATA_VERSION||
 					 version.toString() == "2.3")
 			{
 				return Data3Parser.parseDragonBonesData(rawDataToParse);
