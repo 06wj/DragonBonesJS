@@ -1,6 +1,5 @@
-# DragonBonesJS
+# DragonBonesJS  [![npm][npm-image]][npm-url] [![gitter][gitter-image]][gitter-url]
 
-[![Join the chat at https://gitter.im/06wjin/DragonBonesJS](https://badges.gitter.im/06wjin/DragonBonesJS.svg)](https://gitter.im/06wjin/DragonBonesJS?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 > DragonBones Library JavaScript Version
 
 ## Info
@@ -75,3 +74,8 @@ Built by gulp:
 
 ## License
 [MIT License](http://en.wikipedia.org/wiki/MIT_License)
+
+[npm-image]: https://img.shields.io/npm/v/dragonbones.svg?style=flat-square
+[npm-url]: https://www.npmjs.com/package/dragonbones
+[gitter-image]: https://img.shields.io/badge/GITTER-join%20chat-green.svg?style=flat-square
+[gitter-url]: https://gitter.im/06wjin/DragonBonesJS?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
