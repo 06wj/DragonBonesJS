@@ -1,4 +1,18 @@
+# The repo is no longer updated, please use [the official library](https://github.com/DragonBones/DragonBonesJS)
+
+   
+      
+         
 # DragonBonesJS  [![npm][npm-image]][npm-url] [![gitter][gitter-image]][gitter-url]
+
+
+
+
+
+
+
+
+
 
 > DragonBones Library JavaScript Version
 
